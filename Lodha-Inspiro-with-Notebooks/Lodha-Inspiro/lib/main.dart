@@ -3,19 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_update_service.dart';
 import 'notification_service.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
 
-// Global ValueNotifier to handle Light/Dark mode toggling
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url:
-        'https://orsarmmwvjkltpditpnt.supabase.co',
+    url: 'https://orsarmmwvjkltpditpnt.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcnNhcm1td3Zqa2x0cGRpdHBudCIsInJlZiI6Im9yc2FybW13dmprbHRwZGl0cG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODM4MTMsImV4cCI6MjEwMDU1OTgxM30.T-3DRNT7k6XyK3d3oajNcWkeDxb1yfUGV6QnaqsgJ-M',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
+        'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yc2FybW13dmprbHRwZGl0cG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODM4MTMsImV4cCI6MjEwMDU1OTgxM30.'
+        'T-3DRNT7k6XyK3d3oajNcWkeDxb1yfUGV6QnaqsgJ-M',
   );
 
   runApp(const MyApp());
