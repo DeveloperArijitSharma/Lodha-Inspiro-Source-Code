@@ -18,6 +18,6 @@ class GeminiConfig {
     defaultValue: 'YOUR_GEMINI_API_KEY_HERE',
   );
 
-  /// Fast + cheap, good default for chat/summaries/scripts.
-  static const String chatModel = 'gemini-2.0-flash';
+  /// Fast + low-latency model for chat, summaries, quizzes and audio scripts.
+  static const String chatModel = 'gemini-3.5-flash-lite';
 }
