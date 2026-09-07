@@ -150,6 +150,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     } catch (_) {}
   }
 
+  // ------------------------------------------------------------------- CHAT
+
   String _cleanAiText(String value) {
     var cleaned = value.replaceAll(RegExp(r'(^|\n)\s*#{1,6}\s*'), r'$1');
     cleaned = cleaned.replaceAll(RegExp(r'(^|\n)\s*[-*•]\s+'), r'$1');
@@ -165,8 +167,10 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       _toast('Add a source first so I have something to answer from.', error: true);
       return;
     }
+
     _chatController.clear();
-    final userMsg = ChatMessage(id: _uuid.v4(), isUser: true, text: text, createdAt: DateTime.now());
+    final userMsg = ChatMessage(
+        id: _uuid.v4(), isUser: true, text: text, createdAt: DateTime.now());
     setState(() {
       _messages.add(userMsg);
       _sendingMessage = true;
@@ -174,13 +178,15 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     });
     _scrollToBottom();
     unawaited(_repo.addMessage(widget.notebook.id, userMsg));
+
     try {
       final answer = _cleanAiText(await _gemini.answerFromSources(
         sources: _sources,
         history: _messages.sublist(0, _messages.length - 1),
         question: text,
       ));
-      final aiMsg = ChatMessage(id: _uuid.v4(), isUser: false, text: answer, createdAt: DateTime.now());
+      final aiMsg = ChatMessage(
+          id: _uuid.v4(), isUser: false, text: answer, createdAt: DateTime.now());
       setState(() {
         _messages.add(aiMsg);
         _sendingMessage = false;
@@ -204,6 +210,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       }
     });
   }
+
+  // ---------------------------------------------------------------- STUDIO
 
   Future<void> _generateSummary() async {
     if (_sources.isEmpty) {
@@ -245,7 +253,11 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
 
   List<String> _audioLines() {
     if (_audioScript == null) return const [];
-    return _audioScript!.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    return _audioScript!
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
   }
 
   Future<void> _toggleNarration() async {
@@ -258,28 +270,35 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     }
     final lines = _audioLines();
     if (lines.isEmpty) return;
+
     _audioTimer?.cancel();
     setState(() {
       _speaking = true;
       _audioPaused = false;
       _audioProgress = 0;
     });
+
     final voices = await _tts.getVoices;
     final englishVoices = (voices is List ? voices : const [])
         .whereType<Map>()
-        .where((v) => (v['locale']?.toString() ?? '').toLowerCase().startsWith('en'))
+        .where((v) =>
+            (v['locale']?.toString() ?? '').toLowerCase().startsWith('en'))
         .toList();
     final host1 = englishVoices.isNotEmpty ? englishVoices.first : null;
     final host2 = englishVoices.length > 1 ? englishVoices[1] : host1;
+
     var completedLines = 0;
     _audioTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (!mounted || !_speaking) return;
-      setState(() => _audioProgress = (completedLines / lines.length).clamp(0.0, 1.0));
+      setState(() => _audioProgress =
+          (completedLines / lines.length).clamp(0.0, 1.0));
     });
+
     for (final line in lines) {
       if (!_speaking) break;
       final isHostB = RegExp(r'^Host B:', caseSensitive: false).hasMatch(line);
-      final spoken = line.replaceFirst(RegExp(r'^Host [AB]:\s*', caseSensitive: false), '');
+      final spoken = line.replaceFirst(
+          RegExp(r'^Host [AB]:\s*', caseSensitive: false), '');
       if (isHostB && host2 != null) {
         await _tts.setVoice(Map<String, String>.from(host2));
       } else if (host1 != null) {
@@ -287,10 +306,19 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       }
       await _tts.speak(spoken);
       completedLines++;
-      if (mounted && _speaking) setState(() => _audioProgress = (completedLines / lines.length).clamp(0.0, 1.0));
+      if (mounted && _speaking) {
+        setState(() => _audioProgress =
+            (completedLines / lines.length).clamp(0.0, 1.0));
+      }
     }
+
     _audioTimer?.cancel();
-    if (mounted) setState(() { _speaking = false; _audioProgress = 1.0; });
+    if (mounted) {
+      setState(() {
+        _speaking = false;
+        _audioProgress = 1.0;
+      });
+    }
   }
 
   String _formatAudioTime(double progress) {
@@ -301,77 +329,143 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
 
   Widget _buildAudioPlayer(bool isDark, Color textColor) {
     final lines = _audioLines();
-    final activeIndex = lines.isEmpty ? 0 : (_audioProgress * lines.length).floor().clamp(0, lines.length - 1);
+    final activeIndex = lines.isEmpty
+        ? 0
+        : (_audioProgress * lines.length).floor().clamp(0, lines.length - 1);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         color: isDark ? const Color(0xFF111318) : const Color(0xFFF4F7FA),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(colors: [Color(0xFF32C5FF), Color(0xFF7C5CFF)]),
-            ),
-            child: const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 30),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF32C5FF), Color(0xFF7C5CFF)]),
+                ),
+                child: const Icon(Icons.graphic_eq_rounded,
+                    color: Colors.white, size: 30),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Audio Overview',
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Google Sans Flex')),
+                    SizedBox(height: 3),
+                    Text('Two-host study discussion',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontFamily: 'Google Sans Flex')),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _toggleNarration,
+                icon: Icon(
+                    _speaking
+                        ? Icons.stop_circle_rounded
+                        : Icons.play_circle_fill_rounded,
+                    size: 44,
+                    color: _accentBlue),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Audio Overview', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
-            SizedBox(height: 3),
-            Text('Two-host study discussion', style: TextStyle(fontSize: 13, color: Colors.grey, fontFamily: 'Google Sans Flex')),
-          ])),
-          IconButton(
-            onPressed: _toggleNarration,
-            icon: Icon(_speaking ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded, size: 44, color: _accentBlue),
-          ),
-        ]),
-        const SizedBox(height: 18),
-        Slider(
-          value: _audioProgress,
-          onChanged: (value) async {
-            setState(() => _audioProgress = value);
-            if (_speaking) {
-              await _tts.stop();
-              setState(() => _speaking = false);
-            }
-          },
-          activeColor: _accentBlue,
-        ),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(_formatAudioTime(_audioProgress), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const Text('9:43', style: TextStyle(fontSize: 12, color: Colors.grey)),
-        ]),
-        const SizedBox(height: 14),
-        Text('Live transcript', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
-        const SizedBox(height: 8),
-        Container(
-          constraints: const BoxConstraints(maxHeight: 250),
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: lines.length,
-            itemBuilder: (context, index) {
-              final line = lines[index].replaceFirst(RegExp(r'^Host [AB]:\s*', caseSensitive: false), '');
-              final isActive = index == activeIndex;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                child: Text(line, style: TextStyle(
-                  color: isActive ? textColor : (isDark ? Colors.white38 : Colors.black38),
-                  fontSize: isActive ? 16 : 14,
-                  height: 1.35,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                  fontFamily: 'Google Sans Flex',
-                )),
-              );
+          const SizedBox(height: 18),
+          Slider(
+            value: _audioProgress,
+            onChanged: (value) async {
+              setState(() => _audioProgress = value);
+              if (_speaking) {
+                await _tts.stop();
+                setState(() => _speaking = false);
+              }
             },
+            activeColor: _accentBlue,
           ),
-        ),
-      ]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_formatAudioTime(_audioProgress),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text('9:43',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text('Live transcript',
+              style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Google Sans Flex')),
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: lines.length,
+              itemBuilder: (context, index) {
+                final line = lines[index].replaceFirst(
+                    RegExp(r'^Host [AB]:\s*', caseSensitive: false), '');
+                final isActive = index == activeIndex;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  child: Text(
+                    line,
+                    style: TextStyle(
+                      color: isActive
+                          ? textColor
+                          : (isDark ? Colors.white38 : Colors.black38),
+                      fontSize: isActive ? 16 : 14,
+                      height: 1.35,
+                      fontWeight:
+                          isActive ? FontWeight.w700 : FontWeight.w400,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  // -------------------------------------------------------------------- NOTES
+
+  Future<void> _saveMessageAsNote(ChatMessage message) async {
+    HapticFeedback.mediumImpact();
+    final note = NotebookNote(
+      id: _uuid.v4(),
+      notebookId: widget.notebook.id,
+      title: message.text.split('\n').first.length > 60
+          ? '${message.text.split('\n').first.substring(0, 60)}...'
+          : message.text.split('\n').first,
+      content: message.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    try {
+      final saved = await _repo.addNote(note);
+      setState(() => _notes.insert(0, saved));
+      _toast('Saved to notes.');
+    } catch (_) {
+      _toast('Could not save the note.', error: true);
+    }
   }
 
   @override
@@ -380,11 +474,18 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.notebook.title, style: const TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),
-        bottom: TabBar(controller: _tabController, tabs: const [Tab(text: 'Sources'), Tab(text: 'Chat'), Tab(text: 'Studio')]),
+        title: Text(widget.notebook.title,
+            style: const TextStyle(
+                fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),
+        bottom: TabBar(controller: _tabController, tabs: const [
+          Tab(text: 'Sources'),
+          Tab(text: 'Chat'),
+          Tab(text: 'Studio')
+        ]),
       ),
       body: _loadingSources
-          ? const Center(child: CircularProgressIndicator(color: _accentBlue))
+          ? const Center(
+              child: CircularProgressIndicator(color: _accentBlue))
           : TabBarView(controller: _tabController, children: [
               _buildSourcesTab(isDark, textColor),
               _buildChatTab(isDark, textColor),
@@ -393,129 +494,300 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildSourcesTab(bool isDark, Color textColor) => ListView(
-        padding: const EdgeInsets.all(20),
+  Widget _buildStudioTab(bool isDark, Color textColor) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildStudioCard(
+          isDark: isDark,
+          textColor: textColor,
+          icon: Icons.summarize_rounded,
+          title: 'Notebook summary',
+          child: _generatingSummary
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                      child: CircularProgressIndicator(color: _accentBlue)),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _summary?.isNotEmpty == true
+                          ? _summary!
+                          : 'Generate a summary of everything in this notebook.',
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black87,
+                          fontFamily: 'Google Sans Flex',
+                          height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _generateSummary,
+                      child: Text(
+                          _summary == null ? 'Generate summary' : 'Regenerate'),
+                    ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+        _buildStudioCard(
+          isDark: isDark,
+          textColor: textColor,
+          icon: Icons.podcasts_rounded,
+          title: 'Audio Overview',
+          child: _generatingScript
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                      child: CircularProgressIndicator(color: _accentBlue)),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_audioScript == null)
+                      Text(
+                        'Generate a two-host discussion of your sources, then listen in the full player.',
+                        style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontFamily: 'Google Sans Flex',
+                            height: 1.4),
+                      )
+                    else
+                      _buildAudioPlayer(isDark, textColor),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _generateAudioOverview,
+                      child: Text(_audioScript == null
+                          ? 'Generate audio'
+                          : 'Regenerate audio'),
+                    ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+        _buildStudioCard(
+          isDark: isDark,
+          textColor: textColor,
+          icon: Icons.sticky_note_2_outlined,
+          title: 'Notes',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_notes.isEmpty)
+                Text('No notes yet. Write one, or save an answer from Chat.',
+                    style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.black45,
+                        fontFamily: 'Google Sans Flex')),
+              ..._notes.map((note) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.04)
+                          : Colors.black.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(note.title,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Google Sans Flex')),
+                          const SizedBox(height: 4),
+                          Text(note.content,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontFamily: 'Google Sans Flex')),
+                        ]),
+                  )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStudioCard({
+    required bool isDark,
+    required Color textColor,
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF17191D) : Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ElevatedButton.icon(
+          Row(children: [
+            Icon(icon, color: _accentBlue),
+            const SizedBox(width: 10),
+            Text(title,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Google Sans Flex')),
+          ]),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourcesTab(bool isDark, Color textColor) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Row(children: [
+          Expanded(
+            child: Text('Sources',
+                style: TextStyle(
+                    color: textColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Google Sans Flex')),
+          ),
+          FilledButton.icon(
             onPressed: _addFileSource,
             icon: const Icon(Icons.add),
-            label: const Text('Add source', style: TextStyle(fontFamily: 'Google Sans Flex')),
+            label: const Text('Add source'),
           ),
-          const SizedBox(height: 16),
-          if (_sources.isEmpty)
-            const Text('No sources yet.', style: TextStyle(fontFamily: 'Google Sans Flex')),
-          ..._sources.map((s) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.description_outlined, color: _accentBlue),
-                  title: Text(s.title, style: const TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.w600)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _deleteSource(s)),
-                ),
-              )),
-        ],
-      );
+        ]),
+        const SizedBox(height: 14),
+        if (_sources.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+                child: Text('No sources yet. Add a PDF, TXT, or Markdown file.')),
+          ),
+        ..._sources.map((source) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF17191D) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.black.withOpacity(0.06)),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.description_outlined,
+                    color: _accentBlue),
+                title: Text(source.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Google Sans Flex')),
+                subtitle: Text(source.mimeType,
+                    style: const TextStyle(fontFamily: 'Google Sans Flex')),
+                trailing: IconButton(
+                    onPressed: () => _deleteSource(source),
+                    icon: const Icon(Icons.delete_outline)),
+              ),
+            )),
+      ],
+    );
+  }
 
-  Widget _buildChatTab(bool isDark, Color textColor) => Column(children: [
+  Widget _buildChatTab(bool isDark, Color textColor) {
+    return Column(
+      children: [
         Expanded(
           child: ListView.builder(
             controller: _chatScroll,
             padding: const EdgeInsets.all(20),
             itemCount: _messages.length + (_sendingMessage ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == _messages.length) return const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: _accentBlue));
+              if (index == _messages.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: CircularProgressIndicator(color: _accentBlue)),
+                );
+              }
               final message = _messages[index];
               return Align(
-                alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: message.isUser
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 620),
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: message.isUser ? _accentBlue : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F3F5)),
-                    borderRadius: BorderRadius.circular(20),
+                    color: message.isUser
+                        ? _accentBlue
+                        : (isDark
+                            ? const Color(0xFF1E2024)
+                            : const Color(0xFFF1F3F5)),
+                    borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Text(message.text, style: TextStyle(color: message.isUser ? Colors.white : textColor, fontFamily: 'Google Sans Flex', height: 1.4)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(message.text,
+                          style: TextStyle(
+                              color: message.isUser ? Colors.white : textColor,
+                              fontFamily: 'Google Sans Flex',
+                              height: 1.45)),
+                      if (!message.isUser) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _saveMessageAsNote(message),
+                          icon: const Icon(Icons.bookmark_add_outlined,
+                              size: 17),
+                          label: const Text('Save as note'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
         if (_suggestedQuestions.isNotEmpty)
-          SizedBox(height: 48, child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _suggestedQuestions.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) => ActionChip(label: Text(_suggestedQuestions[i]), onPressed: () => _sendMessage(_suggestedQuestions[i])),
-          )),
+          SizedBox(
+            height: 54,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _suggestedQuestions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => ActionChip(
+                label: Text(_suggestedQuestions[i]),
+                onPressed: () => _sendMessage(_suggestedQuestions[i]),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: TextField(
             controller: _chatController,
             onSubmitted: (_) => _sendMessage(),
+            minLines: 1,
+            maxLines: 4,
             decoration: InputDecoration(
-              hintText: 'Ask about your sources...',
-              suffixIcon: IconButton(onPressed: _sendingMessage ? null : () => _sendMessage(), icon: const Icon(Icons.send_rounded, color: _accentBlue)),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+              hintText: 'Ask anything about your sources...',
+              suffixIcon: IconButton(
+                  onPressed: _sendingMessage ? null : () => _sendMessage(),
+                  icon: const Icon(Icons.send_rounded, color: _accentBlue)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
             ),
           ),
         ),
-      ]);
-
-  Widget _buildStudioCard({required bool isDark, required Color textColor, required IconData icon, required String title, required Widget child}) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [Icon(icon, color: _accentBlue), const SizedBox(width: 10), Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex'))]),
-            const SizedBox(height: 14),
-            child,
-          ]),
-        ),
-      );
-
-  Widget _buildStudioTab(bool isDark, Color textColor) => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildStudioCard(
-            isDark: isDark,
-            textColor: textColor,
-            icon: Icons.summarize_rounded,
-            title: 'Notebook summary',
-            child: _generatingSummary
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: CircularProgressIndicator(color: _accentBlue)))
-                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_summary?.isNotEmpty == true ? _summary! : 'Generate a summary of everything in this notebook.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontFamily: 'Google Sans Flex', height: 1.4)),
-                    const SizedBox(height: 12),
-                    OutlinedButton(onPressed: _generateSummary, child: Text(_summary == null ? 'Generate summary' : 'Regenerate')),
-                  ]),
-          ),
-          const SizedBox(height: 16),
-          _buildStudioCard(
-            isDark: isDark,
-            textColor: textColor,
-            icon: Icons.podcasts_rounded,
-            title: 'Audio Overview',
-            child: _generatingScript
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: CircularProgressIndicator(color: _accentBlue)))
-                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    if (_audioScript == null)
-                      Text('Generate a two-host discussion of your sources, then listen in the full player.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontFamily: 'Google Sans Flex', height: 1.4))
-                    else
-                      _buildAudioPlayer(isDark, textColor),
-                    const SizedBox(height: 12),
-                    OutlinedButton(onPressed: _generateAudioOverview, child: Text(_audioScript == null ? 'Generate audio' : 'Regenerate audio')),
-                  ]),
-          ),
-          const SizedBox(height: 16),
-          _buildStudioCard(
-            isDark: isDark,
-            textColor: textColor,
-            icon: Icons.sticky_note_2_outlined,
-            title: 'Notes',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_notes.isEmpty) Text('No notes yet.', style: TextStyle(color: isDark ? Colors.white54 : Colors.black45, fontFamily: 'Google Sans Flex')),
-              ..._notes.map((note) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(note.title, style: const TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.w600)))),
-            ]),
-          ),
-        ],
-      );
+      ],
+    );
+  }
 }
