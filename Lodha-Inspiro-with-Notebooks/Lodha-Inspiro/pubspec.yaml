@@ -11,21 +11,26 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   
-  # 🚀 Your Database & Auth
+  # Your Database & Auth
   supabase_flutter: ^2.3.0
   
-  # 🚀 Real-time Voice & Video Calling SDK
-  # Remove zego_uikit_prebuilt_call and add this:
+  # Real-time Voice & Video Calling SDK
   agora_rtc_engine: ^6.5.4
 
   permission_handler: ^11.3.0
   image_picker: ^1.0.7
 
-  # 🚀 Notebooks (Gemini-powered NotebookLM-style feature)
-  http: ^1.2.2               # REST calls to the Gemini API
-  file_picker: ^8.1.2        # cross-platform source upload (PDF/txt/md/docx)
-  flutter_tts: ^4.2.0        # on-device narration for Audio Overview
-  uuid: ^4.5.1                # local id generation for messages/sources
+  # Notebooks (Gemini-powered NotebookLM-style feature)
+  http: ^1.2.2
+  file_picker: ^8.1.2
+  flutter_tts: ^4.2.0
+  uuid: ^4.5.1
+
+  # Studio exports
+  pdf: ^3.11.3
+  archive: ^3.6.1
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
@@ -35,11 +40,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # If you have images in the future
-  # assets:
-  #   - assets/images/
-
-  # 🚀 Your custom font integration
   fonts:
     - family: Google Sans Flex
       fonts:
