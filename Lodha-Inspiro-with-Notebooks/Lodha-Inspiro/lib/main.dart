@@ -11,10 +11,7 @@ void main() async {
 
   await Supabase.initialize(
     url: 'https://orsarmmwvjkltpditpnt.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-        'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yc2FybW13dmprbHRwZGl0cG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODM4MTMsImV4cCI6MjEwMDU1OTgxM30.'
-        'T-3DRNT7k6XyK3d3oajNcWkeDxb1yfUGV6QnaqsgJ-M',
+    anonKey: 'sb_publishable_5ODxWB_3VB_JUJDdLyfjuQ_fG4aUlUi',
   );
 
   runApp(const MyApp());
