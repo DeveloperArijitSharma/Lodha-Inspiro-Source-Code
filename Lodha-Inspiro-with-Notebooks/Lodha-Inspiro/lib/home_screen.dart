@@ -6,6 +6,7 @@ import 'chat_screen.dart';
 import 'login_screen.dart';
 import 'main.dart';
 import 'notebooks/notebooks_list_screen.dart';
+import 'ai/inspiro_ai_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -232,6 +233,58 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader('Live classes', textColor),
+          SizedBox(height: size.height * 0.018),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const InspiroAiScreen()),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF202A2F) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: _accentBlue.withOpacity(0.35)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(
+                      color: _accentBlue.withOpacity(0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: _accentBlue),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Inspiro AI', style: TextStyle(
+                          color: textColor,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Google Sans Flex',
+                        )),
+                        const SizedBox(height: 3),
+                        Text('Ask, learn, plan and explore with your AI study assistant.',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.62),
+                            fontSize: 13,
+                            fontFamily: 'Google Sans Flex',
+                          )),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 17, color: _accentBlue),
+                ],
+              ),
+            ),
+          ),
           SizedBox(height: size.height * 0.025),
           Container(
             width: double.infinity,
@@ -467,9 +520,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Row(
             children: [
-              _buildChatTabItem(0, 'Classmates', isDark),
-              _buildChatTabItem(1, 'Teachers', isDark),
-              _buildChatTabItem(2, 'Groups', isDark),
+              _buildChatTabItem(0, 'Classmates', Icons.person_outline, isDark),
+              _buildChatTabItem(1, 'Teachers', Icons.school_outlined, isDark),
+              _buildChatTabItem(2, 'Groups', Icons.groups_outlined, isDark),
             ],
           ),
         ),
@@ -477,38 +530,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildChatTabItem(int index, String label, bool isDark) {
-    bool isSelected = _selectedChatTab == index;
+  Widget _buildChatTabItem(
+      int index, String title, IconData icon, bool isDark) {
+    final selected = _selectedChatTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _selectedChatTab = index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+        onTap: () => setState(() => _selectedChatTab = index),
+        child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected
-                ? (isDark ? Colors.white.withOpacity(0.2) : Colors.white)
+            color: selected
+                ? _accentBlue.withOpacity(0.2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.05), blurRadius: 5)
-                  ]
-                : [],
           ),
-          child: Center(
-            child: Text(label,
-                style: TextStyle(
-                    color: isSelected
-                        ? (isDark ? Colors.white : Colors.black)
-                        : (isDark ? Colors.white54 : Colors.black54),
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 13,
-                    fontFamily: 'Google Sans Flex')),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: selected
+                      ? _accentBlue
+                      : (isDark ? Colors.white60 : Colors.black54)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: selected
+                            ? _accentBlue
+                            : (isDark ? Colors.white70 : Colors.black54),
+                        fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 12,
+                        fontFamily: 'Google Sans Flex')),
+              ),
+            ],
           ),
         ),
       ),
@@ -516,74 +572,136 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChatTile(
-      String chatId, String title, String chatType, bool isDark) {
+      String id, String name, String type, bool isDark) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  ChatScreen(
-                      chatId: chatId, chatName: title, chatType: chatType),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            ));
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              chatId: id,
+              chatName: name,
+              chatType: type,
+            ),
+          ),
+        );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04), blurRadius: 10)
           ],
         ),
         child: Row(
           children: [
             CircleAvatar(
-                backgroundColor: _accentBlue.withOpacity(0.2),
-                child: Icon(
-                    chatType == 'classmate'
-                        ? Icons.person
-                        : chatType == 'teacher'
-                            ? Icons.school
-                            : Icons.group,
-                    color: _accentBlue)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          fontFamily: 'Google Sans Flex')),
-                  const SizedBox(height: 4),
-                  Text('Tap to chat... (Long press to delete)',
-                      style: TextStyle(
-                          color: isDark ? Colors.white54 : Colors.black54,
-                          fontSize: 12,
-                          fontFamily: 'Google Sans Flex')),
-                ],
+              radius: 24,
+              backgroundColor: _accentBlue.withOpacity(0.2),
+              child: Icon(
+                type == 'teacher'
+                    ? Icons.school
+                    : type == 'group'
+                        ? Icons.groups
+                        : Icons.person,
+                color: _accentBlue,
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded,
-                color: isDark ? Colors.white30 : Colors.black26, size: 16),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(name,
+                  style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      fontFamily: 'Google Sans Flex')),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: isDark ? Colors.white38 : Colors.black26),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSettingsScreenContent(Size size, double padding, bool isDark) {
-    final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+  Future<void> _showAddChatDialog(bool isDark, Color accentColor) async {
+    final nameCtrl = TextEditingController();
+    String selectedType = 'classmate';
 
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Add conversation',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Google Sans Flex')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'e.g. Alex or Science Group',
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedType,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'classmate', child: Text('Classmate')),
+                  DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
+                  DropdownMenuItem(value: 'group', child: Text('Group')),
+                ],
+                onChanged: (value) =>
+                    setDialogState(() => selectedType = value ?? 'classmate'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                try {
+                  await supabase.from('chats').insert({
+                    'chat_name': name,
+                    'chat_type': selectedType,
+                  });
+                  if (context.mounted) Navigator.pop(context);
+                  _fetchChatsFromSupabase();
+                } catch (e) {
+                  _showGlassSnackBar('Failed to add conversation.',
+                      isError: true);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsScreenContent(
+      Size size, double padding, bool isDark) {
+    final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
     return SingleChildScrollView(
       key: const ValueKey(3),
       padding: EdgeInsets.fromLTRB(
@@ -593,111 +711,84 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader('Settings', textColor),
           SizedBox(height: size.height * 0.03),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05), blurRadius: 10)
-                ]),
-            child: Row(
-              children: [
-                CircleAvatar(
-                    radius: 30,
-                    backgroundColor: _accentBlue.withOpacity(0.2),
-                    child: Icon(Icons.person_rounded,
-                        color: _accentBlue, size: 32)),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_userName,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Google Sans Flex')),
-                      const SizedBox(height: 2),
-                      Text(_userEmail,
-                          style: TextStyle(
-                              color: isDark ? Colors.white60 : Colors.black54,
-                              fontSize: 13,
-                              fontFamily: 'Google Sans Flex')),
-                    ],
-                  ),
-                ),
-                IconButton(
-                    icon: Icon(Icons.edit_rounded, color: _accentBlue),
-                    onPressed: () => _showEditNameDialog(isDark),
-                    tooltip: 'Change Display Name'),
-              ],
-            ),
-          ),
-          SizedBox(height: size.height * 0.025),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05), blurRadius: 10)
-                ]),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                        isDark
-                            ? Icons.dark_mode_rounded
-                            : Icons.light_mode_rounded,
-                        color: _accentBlue),
-                    const SizedBox(width: 12),
-                    Text('Light Mode',
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Google Sans Flex')),
-                  ],
-                ),
-                Switch.adaptive(
-                  value: !isDark,
-                  activeColor: _accentBlue,
-                  onChanged: (value) {
-                    HapticFeedback.selectionClick();
-                    themeNotifier.value =
-                        value ? ThemeMode.light : ThemeMode.dark;
-                  },
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: size.height * 0.025),
-          SizedBox(
-            width: double.infinity,
-            height: size.height * 0.065,
-            child: ElevatedButton.icon(
-              onPressed: _signOut,
-              icon: const Icon(Icons.logout_rounded, color: Colors.white),
-              label: const Text('Sign Out',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'Google Sans Flex')),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  elevation: 0),
-            ),
-          ),
+          _buildSettingCard(
+              icon: Icons.person_outline,
+              title: 'Profile',
+              subtitle: _userName,
+              onTap: () => _showProfileDialog(isDark, _accentBlue)),
+          const SizedBox(height: 12),
+          _buildSettingCard(
+              icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              title: 'Appearance',
+              subtitle: isDark ? 'Dark mode' : 'Light mode',
+              onTap: () => themeNotifier.value =
+                  isDark ? ThemeMode.light : ThemeMode.dark),
+          const SizedBox(height: 12),
+          _buildSettingCard(
+              icon: Icons.info_outline,
+              title: 'About Lodha Inspiro',
+              subtitle: 'Student portal & learning tools',
+              onTap: () => _showGlassSnackBar(
+                  'Lodha Inspiro is evolving into a student super-app. ✨')),
+          const SizedBox(height: 12),
+          _buildSettingCard(
+              icon: Icons.logout_rounded,
+              title: 'Sign out',
+              subtitle: 'End your current session',
+              onTap: _signOut),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSettingCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+              color: isDark ? Colors.white10 : Colors.black.withOpacity(.05)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: _accentBlue.withOpacity(.14), shape: BoxShape.circle),
+              child: Icon(icon, color: _accentBlue),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Google Sans Flex')),
+                  const SizedBox(height: 3),
+                  Text(subtitle,
+                      style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.black54,
+                          fontSize: 13,
+                          fontFamily: 'Google Sans Flex')),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: isDark ? Colors.white38 : Colors.black26),
+          ],
+        ),
       ),
     );
   }
@@ -705,141 +796,83 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildGlassDrawer(Size size, bool isDark) {
     return Drawer(
       backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(40)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(
-            decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.black.withOpacity(0.4)
-                    : Colors.white.withOpacity(0.5),
-                border: Border(
-                    right: BorderSide(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.15)
-                            : Colors.white.withOpacity(0.8),
-                        width: 1.5))),
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: size.width * 0.06,
-                    vertical: size.height * 0.02),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                            radius: size.width * 0.075,
-                            backgroundColor: _accentBlue.withOpacity(0.2),
-                            child: Icon(Icons.person_rounded,
-                                color: _accentBlue, size: 28)),
-                        SizedBox(width: size.width * 0.04),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_userName,
-                                  style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontSize: size.width * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Google Sans Flex')),
-                              SizedBox(height: size.height * 0.003),
-                              Text(_userEmail,
-                                  style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white60
-                                          : Colors.black54,
-                                      fontSize: size.width * 0.03,
-                                      fontFamily: 'Google Sans Flex'),
-                                  overflow: TextOverflow.ellipsis),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: size.height * 0.02),
-                    Divider(
-                        color: isDark ? Colors.white12 : Colors.black12,
-                        thickness: 1.5),
-                    SizedBox(height: size.height * 0.02),
-                    _buildSidebarItem(
-                        icon: Icons.home_rounded,
-                        title: 'Dashboard',
-                        index: 0,
-                        isDark: isDark),
-                    SizedBox(height: size.height * 0.01),
-                    _buildSidebarItem(
-                        icon: Icons.auto_awesome_rounded,
-                        title: 'Notebooks',
-                        index: 1,
-                        isDark: isDark),
-                    SizedBox(height: size.height * 0.01),
-                    _buildSidebarItem(
-                        icon: Icons.chat_bubble_rounded,
-                        title: 'Messages',
-                        index: 2,
-                        isDark: isDark),
-                    const Spacer(),
-                    ListTile(
-                      leading: const Icon(Icons.logout_rounded,
-                          color: Colors.redAccent),
-                      title: const Text('Sign Out',
-                          style: TextStyle(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Google Sans Flex')),
-                      onTap: _signOut,
-                    ),
-                  ],
-                ),
+      child: SafeArea(
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(32), bottomRight: Radius.circular(32)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(
+              color: isDark
+                  ? Colors.black.withOpacity(.7)
+                  : Colors.white.withOpacity(.85),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Lodha Inspiro',
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Google Sans Flex')),
+                  const SizedBox(height: 6),
+                  Text(_userEmail,
+                      style: TextStyle(
+                          color: isDark ? Colors.white54 : Colors.black54,
+                          fontSize: 13,
+                          fontFamily: 'Google Sans Flex')),
+                  const SizedBox(height: 28),
+                  ListTile(
+                    leading: const Icon(Icons.home_rounded, color: _accentBlue),
+                    title: const Text('Home'),
+                    onTap: () {
+                      setState(() => _currentIndex = 0);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.auto_awesome_rounded,
+                        color: _accentBlue),
+                    title: const Text('Inspiro AI'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const InspiroAiScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_rounded,
+                        color: _accentBlue),
+                    title: const Text('Notebooks'),
+                    onTap: () {
+                      setState(() => _currentIndex = 1);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.chat_bubble_outline_rounded, color: _accentBlue),
+                    title: const Text('Messages'),
+                    onTap: () {
+                      setState(() => _currentIndex = 2);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const Spacer(),
+                  ListTile(
+                    leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                    title: const Text('Sign out'),
+                    onTap: _signOut,
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(
-      {required IconData icon,
-      required String title,
-      required int index,
-      required bool isDark}) {
-    bool isSelected = _currentIndex == index;
-    return Container(
-      decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark
-                  ? Colors.white.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.7))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? Border.all(
-                  color: isDark ? Colors.white24 : Colors.white, width: 1.5)
-              : null),
-      child: ListTile(
-        leading: Icon(icon,
-            color: isSelected
-                ? _accentBlue
-                : (isDark ? Colors.white60 : Colors.black54)),
-        title: Text(title,
-            style: TextStyle(
-                color: isSelected
-                    ? (isDark ? Colors.white : Colors.black)
-                    : (isDark ? Colors.white70 : Colors.black87),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontFamily: 'Google Sans Flex')),
-        onTap: () {
-          setState(() => _currentIndex = index);
-          Navigator.pop(context);
-        },
       ),
     );
   }
@@ -925,40 +958,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildGlassNavItem(
       int index, IconData icon, String label, bool isDark) {
-    bool isSelected = _currentIndex == index;
+    final selected = _currentIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          setState(() => _currentIndex = index);
-        },
+        onTap: () => setState(() => _currentIndex = index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
-              color: isSelected
-                  ? (isDark
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.85))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(28)),
+              color: selected ? _accentBlue.withOpacity(.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(26)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon,
-                  color: isSelected
-                      ? (isDark ? Colors.white : Colors.black)
-                      : (isDark ? Colors.white54 : const Color(0xFF445566)),
-                  size: 24),
+                  size: 22,
+                  color: selected
+                      ? _accentBlue
+                      : (isDark ? Colors.white70 : Colors.black54)),
               const SizedBox(height: 3),
               Text(label,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: isSelected
-                          ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white54 : const Color(0xFF445566)),
-                      fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: selected
+                          ? _accentBlue
+                          : (isDark ? Colors.white70 : Colors.black54),
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
                       fontFamily: 'Google Sans Flex')),
             ],
           ),
@@ -967,269 +993,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showAddChatDialog(bool isDark, Color accentColor) {
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController groupController = TextEditingController();
-    bool isLoading = false;
-
-    showDialog(
+  Future<void> _showProfileDialog(bool isDark, Color accentColor) async {
+    final controller = TextEditingController(text: _userName);
+    await showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setStateDialog) {
-          Future<void> handleAddUser() async {
-            final email = emailController.text.trim();
-            if (email.isEmpty) return;
-
-            String typeStr = _selectedChatTab == 0
-                ? 'classmate'
-                : _selectedChatTab == 1
-                    ? 'teacher'
-                    : 'group';
-            String chatName =
-                _selectedChatTab == 2 ? groupController.text.trim() : email;
-
-            if (chatName.isEmpty) return;
-
-            setStateDialog(() => isLoading = true);
-            try {
-              if (_selectedChatTab != 2) {
-                final userExists = await supabase
-                    .rpc('check_email_exists', params: {'lookup_email': email});
-                if (userExists != true) {
-                  Navigator.pop(context);
-                  _showGlassSnackBar('User not found. They must sign up first!',
-                      isError: true);
-                  return;
-                }
-              }
-
-              // 🚀 SAVE CHAT PERMANENTLY TO SUPABASE
-              await supabase.from('chats').insert({
-                'chat_name': chatName,
-                'chat_type': typeStr,
-              });
-
-              Navigator.pop(context);
-              _fetchChatsFromSupabase();
-              _showGlassSnackBar('Chat created successfully! ✨');
-            } catch (e) {
-              Navigator.pop(context);
-              _showGlassSnackBar('Database error saving chat.', isError: true);
-            }
-          }
-
-          if (_selectedChatTab == 0 || _selectedChatTab == 1) {
-            return _GlassDialogBase(
-              isDark: isDark,
-              accentColor: accentColor,
-              isLoading: isLoading,
-              title:
-                  _selectedChatTab == 0 ? 'Add Classmate' : 'Chat with Teacher',
-              icon: _selectedChatTab == 0
-                  ? Icons.person_add_rounded
-                  : Icons.school_rounded,
-              actionText: 'Start Chat',
-              content: _buildGlassTextField(
-                  controller: emailController,
-                  hintText: 'Registered Email Address',
-                  icon: Icons.email_outlined,
-                  isDark: isDark),
-              onAction: handleAddUser,
-            );
-          } else {
-            return _GlassDialogBase(
-              isDark: isDark,
-              accentColor: accentColor,
-              isLoading: isLoading,
-              title: 'Create Group',
-              icon: Icons.group_add_rounded,
-              actionText: 'Create',
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildGlassTextField(
-                      controller: groupController,
-                      hintText: 'Group Name',
-                      icon: Icons.title_rounded,
-                      isDark: isDark),
-                ],
-              ),
-              onAction: handleAddUser,
-            );
-          }
-        });
-      },
-    );
-  }
-
-  void _showEditNameDialog(bool isDark) {
-    final nameController = TextEditingController(text: _userName);
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
-      builder: (context) {
-        return _GlassDialogBase(
-          isDark: isDark,
-          accentColor: _accentBlue,
-          title: 'Change Display Name',
-          icon: Icons.badge_rounded,
-          actionText: 'Save',
-          content: _buildGlassTextField(
-              controller: nameController,
-              hintText: 'New Display Name',
-              icon: Icons.person_outline_rounded,
-              isDark: isDark),
-          onAction: () async {
-            HapticFeedback.mediumImpact();
-            Navigator.pop(context);
-            await _updateUserName(nameController.text);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildGlassTextField(
-      {required TextEditingController controller,
-      required String hintText,
-      required IconData icon,
-      required bool isDark,
-      int maxLines = 1}) {
-    return Container(
-      decoration: BoxDecoration(
-          color: isDark
-              ? Colors.black.withOpacity(0.3)
-              : Colors.white.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? Colors.white12 : Colors.white70)),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontFamily: 'Google Sans Flex'),
-        decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: TextStyle(
-                color: isDark ? Colors.white54 : Colors.black54,
-                fontFamily: 'Google Sans Flex'),
-            prefixIcon:
-                Icon(icon, color: isDark ? Colors.white70 : Colors.black54),
-            border: InputBorder.none,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
-      ),
-    );
-  }
-}
-
-class _GlassDialogBase extends StatelessWidget {
-  final bool isDark;
-  final Color accentColor;
-  final String title;
-  final IconData icon;
-  final Widget content;
-  final String actionText;
-  final VoidCallback onAction;
-  final bool isLoading;
-
-  const _GlassDialogBase(
-      {required this.isDark,
-      required this.accentColor,
-      required this.title,
-      required this.icon,
-      required this.content,
-      required this.actionText,
-      required this.onAction,
-      this.isLoading = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E1E1E).withOpacity(0.6)
-                        : Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.white.withOpacity(0.9),
-                        width: 1.5)),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.2),
-                            shape: BoxShape.circle),
-                        child: Icon(icon, color: accentColor, size: 32)),
-                    const SizedBox(height: 16),
-                    Text(title,
-                        style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Google Sans Flex')),
-                    const SizedBox(height: 20),
-                    content,
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: TextButton.styleFrom(
-                                    foregroundColor: isDark
-                                        ? Colors.white70
-                                        : Colors.black54),
-                                child: const Text('Cancel',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Google Sans Flex')))),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                                onPressed: isLoading ? null : onAction,
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: accentColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    elevation: 0),
-                                child: isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2))
-                                    : Text(actionText,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontFamily: 'Google Sans Flex')))),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Your profile',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Display name'),
         ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await _updateUserName(controller.text);
+              if (context.mounted) Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor, foregroundColor: Colors.white),
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
