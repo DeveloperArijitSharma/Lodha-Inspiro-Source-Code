@@ -19,11 +19,16 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 ## 2. Classroom
 
-- [ ] Class dashboard
-- [ ] Subjects and teachers
-- [ ] Classwork/assignments
-- [ ] Assignment details and due dates
-- [ ] Student submission flow
+- [x] Classroom data models
+- [x] Supabase classroom schema foundation
+- [x] Course/subject repository flow
+- [x] Assignment repository flow
+- [x] Student submission repository flow
+- [ ] Class dashboard UI
+- [ ] Subjects and teachers UI
+- [ ] Classwork/assignments UI
+- [ ] Assignment details and due dates UI
+- [ ] Student submission UI
 - [ ] Teacher announcements
 - [ ] Materials/resources per class
 - [ ] Basic grades/progress view
@@ -35,8 +40,11 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Persistent Supabase-backed chats
 - [x] Image attachments
 - [x] Voice/video calling foundation
-- [ ] Message reactions
-- [ ] Reply/quote messages
+- [x] Reaction data foundation
+- [x] Reply/quote data foundation
+- [x] Edit/delete message state foundation
+- [ ] Message reactions UI
+- [ ] Reply/quote UI
 - [ ] Typing indicators
 - [ ] Read/delivery states
 - [ ] Better group management
@@ -44,7 +52,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 ## 4. Inspiro AI
 
-- [ ] General AI assistant inside the app
+- [x] General AI assistant inside the app
 - [ ] Student-friendly study mode
 - [ ] Explain, summarize, brainstorm and quiz actions
 - [ ] Optional context from the student's notebooks/classes
@@ -81,14 +89,15 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [ ] CI build checks
 - [ ] Clean release configuration
 
-## Build order
+## Current Build Order
 
-1. Notebook 2.0 polish and citations
-2. Classroom foundation
-3. Advanced messaging polish
-4. Inspiro AI
-5. Notifications/realtime
-6. Backend security hardening
-7. UI polish, tests and release readiness
+1. Classroom UI and integration
+2. Advanced messaging UI and integration
+3. Notebook 2.0 citations and source UX
+4. Notifications/realtime
+5. Backend security hardening
+6. UI polish, tests and release readiness
+
+Batch 2 currently contains the Classroom and Advanced Messaging foundations. The next step is to finish their Flutter UI and wire those screens into the existing app experience.
 
 This roadmap is a living plan. Features can be changed, expanded or removed as the prototype grows.
