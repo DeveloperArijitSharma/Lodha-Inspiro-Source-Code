@@ -1,24 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import 'gemini_config.dart';
 import '../notebooks/notebook_models.dart';
+import 'gemini_config.dart';
 
-/// Thin wrapper around the Gemini API (Generative Language REST endpoint).
-///
-/// Every notebook feature (grounded chat, summaries, audio-overview scripts)
-/// goes through [_generate], which just posts a `contents` + optional
-/// `systemInstruction` payload and pulls the text back out. Keeping one
-/// choke point makes it trivial to swap models, add streaming, or move the
-/// key behind a backend later without touching the UI code.
 class GeminiService {
   GeminiService._();
   static final GeminiService instance = GeminiService._();
 
-  static const _base = 'https://generativelanguage.googleapis.com/v1beta';
-
-  Uri _endpoint(String model) =>
-      Uri.parse('$_base/models/$model:generateContent?key=${GeminiConfig.apiKey}');
+  String _endpoint(String model) =>
+      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=${GeminiConfig.apiKey}';
 
   Future<String> _generate({
     required List<Map<String, dynamic>> parts,
@@ -82,11 +73,6 @@ class GeminiService {
     }
   }
 
-  /// Turns every source in the notebook into Gemini "parts": a short label
-  /// followed by either the raw text, or the file bytes as inline data
-  /// (Gemini reads PDFs/images natively server-side, so we never need a
-  /// client-side PDF parser — this is what keeps source upload identical
-  /// across Android/iOS/macOS/Windows/web).
   List<Map<String, dynamic>> _sourceParts(List<NotebookSource> sources) {
     final parts = <Map<String, dynamic>>[];
     for (final s in sources) {
@@ -102,9 +88,6 @@ class GeminiService {
     return parts;
   }
 
-  /// Grounded Q&A: answers strictly from the notebook's sources, in the
-  /// style of NotebookLM, and asks the model to name which source(s) it
-  /// used so the UI can show a citation chip.
   Future<String> answerFromSources({
     required List<NotebookSource> sources,
     required List<ChatMessage> history,
@@ -128,38 +111,15 @@ class GeminiService {
           'You are the AI notebook assistant inside Lodha Inspiro, a study app. '
           'Answer ONLY using the SOURCE material provided above — never use outside '
           'knowledge. If the sources do not contain the answer, say so plainly instead '
-          'of guessing. Keep answers concise and well-structured (use short paragraphs '
-          'or bullet points). At the end of your answer, on a new line, list which '
-          'source(s) you drew from like: Sources: "Source Title A", "Source Title B".',
+          'of guessing. Keep answers concise and well-structured using plain text only. '
+          'Do not use Markdown headings, hash characters, asterisks, bullet markers, '
+          'bold markers, code fences, or decorative symbols at the beginning or end. '
+          'Use short paragraphs or numbered sentences when structure helps. At the end, '
+          'list which source(s) you drew from in plain text like: Sources: "Source Title A", '
+          '"Source Title B".',
     );
   }
 
-  /// General-purpose assistant for Inspiro AI.
-  /// Unlike notebook chat, this mode is not grounded to notebook sources.
-  Future<String> askGeneral({
-    required String prompt,
-    List<ChatMessage> history = const [],
-  }) async {
-    final transcript = history
-        .map((m) => '${m.isUser ? "Student" : "Inspiro AI"}: ${m.text}')
-        .join('\n');
-
-    return _generate(
-      parts: [
-        if (transcript.isNotEmpty)
-          {'text': '--- CONVERSATION SO FAR ---\n$transcript\n'},
-        {'text': '--- NEW REQUEST ---\n$prompt'},
-      ],
-      systemInstruction:
-          'You are Inspiro AI, a friendly student-focused assistant inside Lodha Inspiro. '
-          'Help with studying, explanations, brainstorming, planning and everyday school tasks. '
-          'Use clear language, short sections and practical examples. Do not pretend to know '
-          'private school information that was not provided. If a request needs a source, tell '
-          'the student to add it to an Inspiro Notebook instead.',
-    );
-  }
-
-  /// One-paragraph notebook summary, regenerated whenever sources change.
   Future<String> summarizeNotebook(List<NotebookSource> sources) {
     return _generate(
       parts: [
@@ -168,14 +128,13 @@ class GeminiService {
       ],
       systemInstruction:
           'You summarize study material for a student. Produce a tight 3-5 sentence '
-          'overview of what these combined sources cover, followed by 3-6 bullet '
-          'points of the key topics or takeaways. Do not invent facts not present '
+          'overview of what these combined sources cover, followed by 3-6 plain-text '
+          'takeaway lines. Do not use Markdown headings, hash characters, asterisks, '
+          'bullet markers, bold markers, or code fences. Do not invent facts not present '
           'in the sources.',
     );
   }
 
-  /// Suggested starter questions, shown as chips under an empty notebook chat —
-  /// mirrors NotebookLM's "suggested questions" affordance.
   Future<List<String>> suggestQuestions(List<NotebookSource> sources) async {
     final raw = await _generate(
       parts: [
@@ -198,9 +157,6 @@ class GeminiService {
         .toList();
   }
 
-  /// Generates a two-host, podcast-style dialogue script from the sources —
-  /// the "Audio Overview" script. Playback is handled on-device by
-  /// flutter_tts (see notebook_detail_screen.dart); this just writes the words.
   Future<String> generateAudioOverviewScript(List<NotebookSource> sources) {
     return _generate(
       model: GeminiConfig.chatModel,
@@ -217,7 +173,8 @@ class GeminiService {
       ],
       systemInstruction:
           'You write natural, engaging two-person podcast scripts that explain study '
-          'material clearly, grounded only in the provided sources.',
+          'material clearly, grounded only in the provided sources. Keep the script as plain '
+          'dialogue without Markdown symbols, headings, asterisks, bullets, or stage directions.',
       temperature: 0.8,
     );
   }
