@@ -1,0 +1,45 @@
+name: Build and release APK
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Lodha-Inspiro-with-Notebooks/Lodha-Inspiro
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --build-number ${{ github.run_number }}
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk lodha-inspiro.apk
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" \
+            lodha-inspiro.apk \
+            --title "Lodha Inspiro Build ${{ github.run_number }}" \
+            --notes "Automated APK for commit ${{ github.sha }}. Install updates from inside the app without downloading the source ZIP." \
+            --target "${{ github.sha }}"
