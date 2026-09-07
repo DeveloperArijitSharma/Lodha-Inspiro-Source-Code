@@ -1,68 +1,65 @@
 # Lodha Inspiro
 
-A new Flutter project created with FlutLab - https://flutlab.io
+Lodha Inspiro is a student-focused Flutter super-app prototype bringing learning, communication, live classes and AI study tools into one place.
 
-## 🧠 Notebooks (new): a Gemini-powered NotebookLM-style feature
+## What is included
 
-The "Notebooks" tab (formerly the placeholder "Classwork" tab) lets a student
-create a notebook, add sources (pasted text, `.txt`/`.md`, or a PDF), and:
+### 📚 Inspiro Notebooks
+A NotebookLM-style study workspace powered by Gemini:
 
-- **Chat** with those sources only — grounded Q&A, not general knowledge
-- **Summarize** the whole notebook in one tap
-- **Audio Overview** — generates a two-host discussion script and narrates it
-  on-device (via `flutter_tts`)
+- Create multiple private notebooks
+- Add pasted text, TXT, Markdown and PDF sources
+- Ask questions grounded only in notebook sources
+- Get source-aware answers instead of unsupported guesses
+- Generate notebook summaries
+- Generate suggested study questions
+- Generate an Audio Overview script and narrate it on-device
+- Save AI answers as editable notes
+- Create and edit notes manually
+- Delete sources and notes
+- Store notebook data in Supabase with per-user row-level security
 
-### Setup
+### 🤖 Inspiro AI
+A separate general-purpose student assistant powered by the same Gemini service layer. It can help with explanations, study planning, brainstorming and quick quizzes without being tied to one notebook.
 
-1. **Get a Gemini API key** — free, from [Google AI Studio](https://aistudio.google.com/apikey).
-2. **Set the key.** Either:
-   - Edit `lib/gemini/gemini_config.dart` and paste it into `apiKey`, or
-   - (Recommended, so it's not committed to git) run with:
-     ```
-     flutter run --dart-define=GEMINI_API_KEY=your_key_here
-     ```
-3. **Add the Supabase tables.** Open your Supabase project → SQL Editor →
-   paste and run `supabase_notebooks_schema.sql` from the project root. This
-   adds `notebooks`, `notebook_sources`, and `notebook_messages`, all with
-   row-level security so each student only sees their own.
-4. `flutter pub get`, then run on any target platform.
+### 💬 Communication
+The existing app includes student/teacher/group messaging, image attachments and calling support through the existing Supabase and Agora integrations.
 
-### Architecture notes
+### 🏫 Learning & live classes
+The app already has the student home/live-class experience and uses the Classwork area for the new Notebooks workspace.
 
-- `lib/gemini/gemini_service.dart` — single choke point for every Gemini
-  call (chat, summarize, suggest questions, audio script). Swapping models,
-  adding streaming, or moving the key behind a backend later is a one-file
-  change.
-- Files (PDFs) are sent to Gemini as inline base64 data rather than parsed
-  client-side — Gemini reads PDFs natively server-side, which is what keeps
-  source upload working identically on Android/iOS/macOS/Windows/web without
-  a native PDF-parsing dependency per platform.
-- `base64_data` is stored inline in Postgres for now. For larger files,
-  switch to a Supabase Storage bucket and store a path instead.
-- The Gemini key currently ships in the client. Fine for prototyping; before
-  a real release, proxy calls through a Supabase Edge Function so the key
-  never lives on-device.
+## Gemini setup
 
-### Not yet built (roadmap)
+The Gemini integration is configured through `lib/gemini/gemini_config.dart` and supports a compile-time environment variable:
 
-- Server-side/studio-quality TTS for Audio Overview (currently uses the
-  device's own TTS voice, not a generated podcast-style voice)
-- Notes panel (turning AI answers into saved, editable notes)
-- Multi-user shared notebooks (classmates collaborating on one notebook)
-- Citation click-through to the exact source passage
+```bash
+flutter run --dart-define=GEMINI_API_KEY=your_key_here
+```
 
-## Getting Started
+For a real production deployment, Gemini requests should eventually move behind a backend such as a Supabase Edge Function so the API key is not shipped inside the client app.
 
-A few resources to get you started if this is your first Flutter project:
+## Supabase setup
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
+Run `supabase_notebooks_schema.sql` in the Supabase SQL Editor. It creates the notebook, source, message and note tables and enables row-level security so notebook records are private to their owner.
 
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For larger uploaded files, the current inline `base64_data` approach should eventually be replaced with Supabase Storage.
 
-## Getting Started: FlutLab - Flutter Online IDE
+## Architecture direction
 
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+The project is intentionally being built in small, reviewable steps:
+
+`Flutter UI → Inspiro AI layer → Notebook AI / General AI → Supabase + sources`
+
+The AI service is kept behind one Gemini service layer so streaming, richer citations, backend proxying and other model changes can be added later without rewriting every screen.
+
+## Roadmap
+
+1. **Notebook 2.0**: richer source handling, stronger citations, better study tools and improved AI UX.
+2. **Classroom**: assignments, submissions, class announcements and teacher/student workflows.
+3. **Advanced Messaging**: stronger realtime chat, media handling, read states and classroom groups.
+4. **Inspiro AI**: persistent conversations, more study modes and better student controls.
+5. **Notifications & realtime events**: central event handling for messages, assignments and classes.
+6. **Security & backend**: Supabase Edge Functions, secure Gemini access and tighter data policies.
+7. **UI, accessibility & performance**: polished responsive layouts, loading states, error states and accessibility improvements.
+
+This is a small project and the architecture/UI will evolve as new ideas are added.
