@@ -25,8 +25,7 @@ class ClassroomRepository {
         .eq('course_id', courseId)
         .order('due_at', ascending: true);
     return rows
-        .map((row) =>
-            ClassroomAssignment.fromMap(Map<String, dynamic>.from(row)))
+        .map((row) => ClassroomAssignment.fromMap(Map<String, dynamic>.from(row)))
         .toList();
   }
 
