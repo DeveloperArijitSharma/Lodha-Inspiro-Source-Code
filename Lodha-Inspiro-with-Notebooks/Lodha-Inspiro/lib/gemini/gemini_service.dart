@@ -11,8 +11,7 @@ class GeminiService {
 
   static const _base = 'https://generativelanguage.googleapis.com/v1beta';
 
-  Uri _endpoint(String model) =>
-      Uri.parse('$_base/models/$model:generateContent?key=${GeminiConfig.apiKey}');
+  Uri _endpoint(String model) => Uri.parse('$_base/models/$model:generateContent?key=${GeminiConfig.apiKey}');
 
   Future<String> _generate({
     required List<Map<String, dynamic>> parts,
@@ -22,9 +21,7 @@ class GeminiService {
     int maxOutputTokens = 2048,
   }) async {
     if (GeminiConfig.apiKey.isEmpty || GeminiConfig.apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
-      throw GeminiException(
-          'No Gemini API key set. Open lib/gemini/gemini_config.dart and add your key '
-          'from Google AI Studio (or pass it with --dart-define=GEMINI_API_KEY=...).');
+      throw GeminiException('No Gemini API key set. Open lib/gemini/gemini_config.dart and add your key from Google AI Studio (or pass it with --dart-define=GEMINI_API_KEY=...).');
     }
 
     final body = {
@@ -50,17 +47,14 @@ class GeminiService {
     );
 
     if (response.statusCode != 200) {
-      throw GeminiException(
-          'Gemini API error (${response.statusCode}): ${_extractError(response.body)}');
+      throw GeminiException('Gemini API error (${response.statusCode}): ${_extractError(response.body)}');
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final candidates = decoded['candidates'] as List<dynamic>?;
     if (candidates == null || candidates.isEmpty) {
       final blockReason = decoded['promptFeedback']?['blockReason'];
-      throw GeminiException(blockReason != null
-          ? 'Gemini blocked this request: $blockReason'
-          : 'Gemini returned no response.');
+      throw GeminiException(blockReason != null ? 'Gemini blocked this request: $blockReason' : 'Gemini returned no response.');
     }
 
     final contentParts = candidates.first['content']?['parts'] as List<dynamic>?;
@@ -84,114 +78,58 @@ class GeminiService {
       if (s.mimeType.startsWith('text/') || s.mimeType == 'application/octet-stream') {
         parts.add({'text': s.textContent ?? ''});
       } else if (s.base64Data != null) {
-        parts.add({
-          'inlineData': {'mimeType': s.mimeType, 'data': s.base64Data}
-        });
+        parts.add({'inlineData': {'mimeType': s.mimeType, 'data': s.base64Data}});
       }
     }
     return parts;
   }
 
-  Future<String> answerFromSources({
-    required List<NotebookSource> sources,
-    required List<ChatMessage> history,
-    required String question,
-  }) async {
-    final transcript = history
-        .map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}')
-        .join('\n');
-
+  Future<String> askGeneral({required String prompt, List<ChatMessage> history = const []}) async {
+    final transcript = history.map((m) => '${m.isUser ? "User" : "Assistant"}: ${m.text}').join('\n');
     return _generate(
       parts: [
-        ..._sourceParts(sources),
-        {'text': '\n--- CONVERSATION SO FAR ---\n$transcript\n--- NEW QUESTION ---\nStudent: $question'},
+        if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'},
+        {'text': 'User request:\n$prompt'},
       ],
-      systemInstruction:
-          'You are the AI notebook assistant inside Lodha Inspiro, a study app. '
-          'Answer ONLY using the SOURCE material provided above. If the sources do not contain the answer, say so plainly instead of guessing. '
-          'Use plain text only. Do not use Markdown headings, hash characters, asterisks, bullet markers, bold markers, code fences, or decorative symbols at the beginning or end. '
-          'At the end, list source names in plain text like: Sources: "Source Title A", "Source Title B".',
+      systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. Use plain text unless the user asks for a specific format. Do not use markdown headings or decorative asterisks at the beginning or end.',
+      temperature: 0.6,
+    );
+  }
+
+  Future<String> answerFromSources({required List<NotebookSource> sources, required List<ChatMessage> history, required String question}) async {
+    final transcript = history.map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}').join('\n');
+    return _generate(
+      parts: [..._sourceParts(sources), {'text': '\n--- CONVERSATION SO FAR ---\n$transcript\n--- NEW QUESTION ---\nStudent: $question'}],
+      systemInstruction: 'You are the AI notebook assistant inside Lodha Inspiro, a study app. Answer ONLY using the SOURCE material provided above. If the sources do not contain the answer, say so plainly instead of guessing. Use plain text only. Do not use Markdown headings, hash characters, asterisks, bullet markers, bold markers, code fences, or decorative symbols at the beginning or end. At the end, list source names in plain text like: Sources: "Source Title A", "Source Title B".',
     );
   }
 
   Future<String> summarizeNotebook(List<NotebookSource> sources) {
-    return _generate(
-      parts: [
-        ..._sourceParts(sources),
-        {'text': '\nWrite a concise summary of the notebook above.'},
-      ],
-      systemInstruction:
-          'You summarize study material for a student. Produce a tight 3-5 sentence overview followed by 3-6 plain-text takeaway lines. '
-          'Do not use Markdown headings, hash characters, asterisks, bullet markers, bold markers, or code fences. Do not invent facts not present in the sources.',
-    );
+    return _generate(parts: [..._sourceParts(sources), {'text': '\nWrite a concise summary of the notebook above.'}], systemInstruction: 'You summarize study material for a student. Produce a tight 3-5 sentence overview followed by 3-6 plain-text takeaway lines. Do not use Markdown headings, hash characters, asterisks, bullet markers, bold markers, or code fences. Do not invent facts not present in the sources.');
   }
 
   Future<List<String>> suggestQuestions(List<NotebookSource> sources) async {
-    final raw = await _generate(
-      parts: [
-        ..._sourceParts(sources),
-        {'text': '\nList exactly 4 short questions (under 12 words each) a student might ask about the sources above. Return ONLY the 4 questions, one per line, no numbering, no extra commentary.'},
-      ],
-      systemInstruction: 'You generate study-prompt suggestions from source material.',
-      temperature: 0.7,
-    );
-    return raw
-        .split('\n')
-        .map((l) => l.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), ''))
-        .where((l) => l.isNotEmpty)
-        .take(4)
-        .toList();
+    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nList exactly 4 short questions (under 12 words each) a student might ask about the sources above. Return ONLY the 4 questions, one per line, no numbering, no extra commentary.'}], systemInstruction: 'You generate study-prompt suggestions from source material.', temperature: 0.7);
+    return raw.split('\n').map((l) => l.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), '')).where((l) => l.isNotEmpty).take(4).toList();
   }
 
-  Future<List<NotebookQuizQuestion>> generateQuiz({
-    required List<NotebookSource> sources,
-    required int count,
-  }) async {
-    if (count < 1 || count >= 50) {
-      throw GeminiException('Choose between 1 and 49 questions.');
-    }
-
-    final raw = await _generate(
-      parts: [
-        ..._sourceParts(sources),
-        {'text': '\nCreate exactly $count multiple-choice study questions from the sources above. Return ONLY valid JSON with this shape: {"questions":[{"question":"...","options":[{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."}],"correctIndex":0,"hint":"..."}]}. Each question must have exactly 4 distinct options, exactly one correct option, a short answer-neutral hint, and concise explanations for every option. Keep everything grounded in the sources. Do not use markdown or code fences.'},
-      ],
-      systemInstruction:
-          'You are a quiz generator for a student notebook. Generate objective, source-grounded MCQs. Never invent facts. Make distractors plausible and unambiguous. The correctIndex is zero-based.',
-      temperature: 0.45,
-      maxOutputTokens: 12000,
-    );
-
+  Future<List<NotebookQuizQuestion>> generateQuiz({required List<NotebookSource> sources, required int count}) async {
+    if (count < 1 || count >= 50) throw GeminiException('Choose between 1 and 49 questions.');
+    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nCreate exactly $count multiple-choice study questions from the sources above. Return ONLY valid JSON with this shape: {"questions":[{"question":"...","options":[{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."}],"correctIndex":0,"hint":"..."}]}. Each question must have exactly 4 distinct options, exactly one correct option, a short answer-neutral hint, and concise explanations for every option. Keep everything grounded in the sources. Do not use markdown or code fences.'}], systemInstruction: 'You are a quiz generator for a student notebook. Generate objective, source-grounded MCQs. Never invent facts. Make distractors plausible and unambiguous. The correctIndex is zero-based.', temperature: 0.45, maxOutputTokens: 12000);
     var cleaned = raw.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replaceFirst(RegExp(r'^```(?:json)?\s*'), '');
       cleaned = cleaned.replaceFirst(RegExp(r'\s*```\s*$'), '');
     }
-
     try {
       final decoded = jsonDecode(cleaned) as Map<String, dynamic>;
       final items = decoded['questions'] as List<dynamic>? ?? const [];
       final questions = items.map((item) {
         final map = Map<String, dynamic>.from(item as Map);
-        final options = (map['options'] as List<dynamic>? ?? const [])
-            .map((option) => Map<String, dynamic>.from(option as Map))
-            .map((option) => QuizOption(
-                  text: option['text']?.toString().trim() ?? '',
-                  why: option['why']?.toString().trim() ?? '',
-                ))
-            .toList();
-        return NotebookQuizQuestion(
-          question: map['question']?.toString().trim() ?? '',
-          options: options,
-          correctIndex: (map['correctIndex'] as num?)?.toInt() ?? -1,
-          hint: map['hint']?.toString().trim() ?? '',
-        );
-      }).where((q) =>
-          q.question.isNotEmpty && q.options.length == 4 && q.correctIndex >= 0 && q.correctIndex < 4 && q.hint.isNotEmpty && q.options.every((o) => o.text.isNotEmpty && o.why.isNotEmpty)).take(count).toList();
-
-      if (questions.length != count) {
-        throw const FormatException('Incomplete quiz response');
-      }
+        final options = (map['options'] as List<dynamic>? ?? const []).map((option) => Map<String, dynamic>.from(option as Map)).map((option) => QuizOption(text: option['text']?.toString().trim() ?? '', why: option['why']?.toString().trim() ?? '')).toList();
+        return NotebookQuizQuestion(question: map['question']?.toString().trim() ?? '', options: options, correctIndex: (map['correctIndex'] as num?)?.toInt() ?? -1, hint: map['hint']?.toString().trim() ?? '');
+      }).where((q) => q.question.isNotEmpty && q.options.length == 4 && q.correctIndex >= 0 && q.correctIndex < 4 && q.hint.isNotEmpty && q.options.every((o) => o.text.isNotEmpty && o.why.isNotEmpty)).take(count).toList();
+      if (questions.length != count) throw const FormatException('Incomplete quiz response');
       return questions;
     } catch (_) {
       throw GeminiException('Gemini returned an invalid quiz. Please try again.');
@@ -199,15 +137,7 @@ class GeminiService {
   }
 
   Future<String> generateAudioOverviewScript(List<NotebookSource> sources) {
-    return _generate(
-      parts: [
-        ..._sourceParts(sources),
-        {'text': '\nWrite a friendly 90-second, two-host podcast script discussing the sources above. Alternate lines between "Host A:" and "Host B:". Explain the material conversationally with no stage directions or sound effect notes.'},
-      ],
-      systemInstruction:
-          'You write natural, engaging two-person podcast scripts that explain study material clearly, grounded only in the provided sources. Keep the script as plain dialogue without Markdown symbols, headings, asterisks, bullets, or stage directions.',
-      temperature: 0.8,
-    );
+    return _generate(parts: [..._sourceParts(sources), {'text': '\nWrite a friendly 90-second, two-host podcast script discussing the sources above. Alternate lines between "Host A:" and "Host B:". Explain the material conversationally with no stage directions or sound effect notes.'}], systemInstruction: 'You write natural, engaging two-person podcast scripts that explain study material clearly, grounded only in the provided sources. Keep the script as plain dialogue without Markdown symbols, headings, asterisks, bullets, or stage directions.', temperature: 0.8);
   }
 }
 
