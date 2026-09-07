@@ -10,12 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  
+
   # Your Database & Auth
   supabase_flutter: ^2.3.0
-  
-  # Real-time Voice & Video Calling SDK
-  agora_rtc_engine: ^6.5.4
 
   permission_handler: ^11.3.0
   image_picker: ^1.0.7
@@ -26,7 +23,8 @@ dependencies:
   flutter_tts: ^4.2.0
   uuid: ^4.5.1
 
-  # Studio exports
+  # App update + Studio exports
+  package_info_plus: ^8.3.1
   pdf: ^3.11.3
   archive: ^3.6.1
   path_provider: ^2.1.5
