@@ -134,6 +134,31 @@ class GeminiService {
     );
   }
 
+  /// General-purpose assistant for Inspiro AI.
+  /// Unlike notebook chat, this mode is not grounded to notebook sources.
+  Future<String> askGeneral({
+    required String prompt,
+    List<ChatMessage> history = const [],
+  }) async {
+    final transcript = history
+        .map((m) => '${m.isUser ? "Student" : "Inspiro AI"}: ${m.text}')
+        .join('\n');
+
+    return _generate(
+      parts: [
+        if (transcript.isNotEmpty)
+          {'text': '--- CONVERSATION SO FAR ---\n$transcript\n'},
+        {'text': '--- NEW REQUEST ---\n$prompt'},
+      ],
+      systemInstruction:
+          'You are Inspiro AI, a friendly student-focused assistant inside Lodha Inspiro. '
+          'Help with studying, explanations, brainstorming, planning and everyday school tasks. '
+          'Use clear language, short sections and practical examples. Do not pretend to know '
+          'private school information that was not provided. If a request needs a source, tell '
+          'the student to add it to an Inspiro Notebook instead.',
+    );
+  }
+
   /// One-paragraph notebook summary, regenerated whenever sources change.
   Future<String> summarizeNotebook(List<NotebookSource> sources) {
     return _generate(
