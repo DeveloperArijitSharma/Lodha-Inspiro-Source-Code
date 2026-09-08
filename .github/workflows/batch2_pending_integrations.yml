@@ -1,0 +1,88 @@
+name: Batch 2 pending integrations
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.event.head_commit.message == 'Run Batch 2 pending integrations'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply pending feature integrations
+        shell: python
+        run: |
+          from pathlib import Path
+
+          home = Path('lib/home_screen.dart')
+          text = home.read_text(encoding='utf-8')
+
+          if "import 'features/home_ai_screen.dart';" not in text:
+              text = text.replace(
+                  "import 'widgets/advanced_settings_section.dart';",
+                  "import 'widgets/advanced_settings_section.dart';\nimport 'features/home_ai_screen.dart';\nimport 'features/announcements_screen.dart';\nimport 'classroom/demo_classwork_screen.dart';",
+                  1,
+              )
+
+          old_card = """          Container(\n            width: double.infinity,\n            padding: EdgeInsets.all(size.width * 0.06),\n            decoration: BoxDecoration(\n                color: const Color(0xFFD3B4FF),\n                borderRadius: BorderRadius.circular(size.width * 0.08)),\n            child: Column(\n              crossAxisAlignment: CrossAxisAlignment.start,\n              children: [\n                const Text('Start',\n                    style: TextStyle(\n                        color: Color(0xFF1E1E1E),\n                        fontSize: 16,\n                        fontWeight: FontWeight.w600,\n                        fontFamily: 'Google Sans Flex')),\n                SizedBox(height: size.height * 0.015),\n                Text(\n                    'Find the right level\\nand book your first\\nfree group class',\n                    style: TextStyle(\n                        color: const Color(0xFF1E1E1E),\n                        fontSize: size.width * 0.055,\n                        fontWeight: FontWeight.bold,\n                        height: 1.2,\n                        fontFamily: 'Google Sans Flex')),\n                SizedBox(height: size.height * 0.025),\n                ElevatedButton(\n                  onPressed: () =>\n                      _showGlassSnackBar('Level Finder coming soon! 🚀'),\n                  style: ElevatedButton.styleFrom(\n                      backgroundColor: const Color(0xFF1E1E1E),\n                      foregroundColor: Colors.white,\n                      shape: RoundedRectangleBorder(\n                          borderRadius: BorderRadius.circular(24))),\n                  child: const Text('Find level',\n                      style: TextStyle(\n                          fontWeight: FontWeight.bold,\n                          fontFamily: 'Google Sans Flex')),\n                ),\n              ],\n            ),\n          ),"""
+          new_card = """          const HomeAiScreen(),"""
+          if old_card in text:
+              text = text.replace(old_card, new_card, 1)
+
+          text = text.replace(
+              "onTap: () => _showGlassSnackBar('Announcements coming soon! 🚀'),",
+              "onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),",
+              1,
+          )
+
+          old_classwork = """  Widget _buildClassworkScreenContent(Size size, double padding, bool isDark) {\n    return Padding(\n      key: const ValueKey(1),\n      padding: EdgeInsets.only(bottom: size.height * 0.11),\n      child: const ClassroomScreen(),\n    );\n  }"""
+          new_classwork = """  Widget _buildClassworkScreenContent(Size size, double padding, bool isDark) {\n    return Padding(\n      key: const ValueKey(1),\n      padding: EdgeInsets.only(bottom: size.height * 0.11),\n      child: Column(\n        children: [\n          Expanded(child: const ClassroomScreen()),\n          Padding(\n            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),\n            child: SizedBox(\n              width: double.infinity,\n              child: OutlinedButton.icon(\n                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemoClassworkScreen())),\n                icon: const Icon(Icons.science_rounded),\n                label: const Text('Try demo classwork', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),\n              ),\n            ),\n          ),\n        ],\n      ),\n    );\n  }"""
+          if old_classwork in text:
+              text = text.replace(old_classwork, new_classwork, 1)
+
+          home.write_text(text, encoding='utf-8')
+
+          notebook = Path('lib/notebooks/notebook_detail_screen.dart')
+          text = notebook.read_text(encoding='utf-8')
+
+          if "import '../features/ai_classwork_generator.dart';" not in text:
+              text = text.replace(
+                  "import '../gemini/gemini_service.dart';",
+                  "import '../gemini/gemini_service.dart';\nimport '../features/ai_classwork_generator.dart';\nimport '../widgets/voice_text_button.dart';\nimport '../classroom/generated_classwork_screen.dart';",
+                  1,
+              )
+
+          marker = """  Future<void> _generateSummary() async {"""
+          method = """  Future<void> _generateAiClasswork() async {\n    final topicController = TextEditingController();\n    final topic = await showDialog<String>(\n      context: context,\n      builder: (dialogContext) => AlertDialog(\n        title: const Text('Create classwork with AI'),\n        content: TextField(\n          controller: topicController,\n          autofocus: true,\n          decoration: const InputDecoration(hintText: 'Topic, e.g. Photosynthesis'),\n        ),\n        actions: [\n          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),\n          FilledButton(onPressed: () => Navigator.pop(dialogContext, topicController.text.trim()), child: const Text('Generate')),\n        ],\n      ),\n    );\n    topicController.dispose();\n    if (topic == null || topic.trim().isEmpty) return;\n    try {\n      _toast('Creating classwork…');\n      final generated = await AiClassworkGenerator().generate(topic: topic, questionCount: 5);\n      if (!mounted) return;\n      await Navigator.push(\n        context,\n        MaterialPageRoute(builder: (_) => GeneratedClassworkScreen(classwork: generated)),\n      );\n    } on GeminiException catch (e) {\n      _toast(e.message, error: true);\n    } catch (_) {\n      _toast('Could not create classwork.', error: true);\n    }\n  }\n\n"""
+          if "Future<void> _generateAiClasswork()" not in text and marker in text:
+              text = text.replace(marker, method + marker, 1)
+
+          voice_marker = """                IconButton(\n                  icon: const Icon(Icons.send_rounded, color: _accentBlue),"""
+          voice_replacement = """                VoiceTextButton(controller: _chatController, color: _accentBlue, tooltip: 'Speak your question'),\n                IconButton(\n                  icon: const Icon(Icons.send_rounded, color: _accentBlue),"""
+          if voice_marker in text and "tooltip: 'Speak your question'" not in text:
+              text = text.replace(voice_marker, voice_replacement, 1)
+
+          studio_marker = """        _buildStudioCard(\n          isDark: isDark,\n          textColor: textColor,\n          icon: Icons.summarize_rounded,"""
+          studio_card = """        _buildStudioCard(\n          isDark: isDark,\n          textColor: textColor,\n          icon: Icons.auto_awesome_rounded,\n          title: 'AI Classwork',\n          child: Column(\n            crossAxisAlignment: CrossAxisAlignment.start,\n            children: [\n              Text('Turn a topic into a student-friendly assignment, then complete it in the app.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontFamily: 'Google Sans Flex', height: 1.4)),\n              const SizedBox(height: 12),\n              ElevatedButton.icon(\n                onPressed: _generateAiClasswork,\n                style: ElevatedButton.styleFrom(backgroundColor: _accentBlue, foregroundColor: Colors.white),\n                icon: const Icon(Icons.auto_awesome_rounded),\n                label: const Text('Create classwork'),\n              ),\n            ],\n          ),\n        ),\n        const SizedBox(height: 16),\n        _buildStudioCard(\n          isDark: isDark,\n          textColor: textColor,\n          icon: Icons.summarize_rounded,"""
+          if studio_marker in text and "title: 'AI Classwork'" not in text:
+              text = text.replace(studio_marker, studio_card, 1)
+
+          notebook.write_text(text, encoding='utf-8')
+
+          workflow = Path('.github/workflows/batch2_pending_integrations.yml')
+          if workflow.exists():
+              workflow.unlink()
+
+      - name: Commit integrated batch 2
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/home_screen.dart lib/notebooks/notebook_detail_screen.dart .github/workflows/batch2_pending_integrations.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: integrate batch 2 AI, announcements and classwork"
+          git push
