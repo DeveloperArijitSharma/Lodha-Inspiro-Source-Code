@@ -1,7 +1,11 @@
 /// Gemini API key pool for Inspiro AI.
-/// Supply up to ten keys at build time with --dart-define.
+/// Supply one key with GEMINI_API_KEY or up to ten keys with
+/// GEMINI_API_KEY_1 through GEMINI_API_KEY_10 at build time.
 /// Never commit real API keys to this public repository.
 class AiKeyPool {
+  static const String singleGeminiKey =
+      String.fromEnvironment('GEMINI_API_KEY');
+
   static const List<String> geminiKeys = [
     String.fromEnvironment('GEMINI_API_KEY_1'),
     String.fromEnvironment('GEMINI_API_KEY_2'),
@@ -15,6 +19,14 @@ class AiKeyPool {
     String.fromEnvironment('GEMINI_API_KEY_10'),
   ];
 
-  static List<String> get availableGeminiKeys =>
-      geminiKeys.where((key) => key.trim().isNotEmpty).toList();
+  static List<String> get availableGeminiKeys {
+    final keys = <String>[];
+    if (singleGeminiKey.trim().isNotEmpty) {
+      keys.add(singleGeminiKey.trim());
+    }
+    keys.addAll(
+      geminiKeys.where((key) => key.trim().isNotEmpty),
+    );
+    return keys.toSet().toList();
+  }
 }
