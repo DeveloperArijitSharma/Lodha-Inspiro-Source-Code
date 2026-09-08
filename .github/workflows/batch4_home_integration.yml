@@ -1,0 +1,78 @@
+name: Batch 4 Home Integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.event.head_commit.message == 'Add Batch 4 home integration automation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Patch Home settings and motion responsiveness
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('lib/home_screen.dart')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "import 'notebooks/notebooks_list_screen.dart';",
+              "import 'notebooks/notebooks_list_screen.dart';\nimport 'app_preferences.dart';\nimport 'widgets/advanced_settings_section.dart';",
+              1,
+          )
+
+          text = text.replace(
+              "duration: const Duration(milliseconds: 300),",
+              "duration: smoothMotionNotifier.value\n                    ? const Duration(milliseconds: 180)\n                    : Duration.zero,",
+              1,
+          )
+
+          text = text.replace(
+              "duration: const Duration(milliseconds: 250),",
+              "duration: smoothMotionNotifier.value\n              ? const Duration(milliseconds: 160)\n              : Duration.zero,",
+              1,
+          )
+
+          text = text.replace(
+              "HapticFeedback.heavyImpact();",
+              "if (hapticsNotifier.value) HapticFeedback.heavyImpact();",
+          )
+          text = text.replace(
+              "HapticFeedback.mediumImpact();",
+              "if (hapticsNotifier.value) HapticFeedback.mediumImpact();",
+          )
+          text = text.replace(
+              "HapticFeedback.lightImpact();",
+              "if (hapticsNotifier.value) HapticFeedback.lightImpact();",
+          )
+          text = text.replace(
+              "HapticFeedback.selectionClick();",
+              "if (hapticsNotifier.value) HapticFeedback.selectionClick();",
+          )
+
+          marker = "          SizedBox(height: size.height * 0.025),\n          SizedBox(\n            width: double.infinity,\n            height: size.height * 0.065,"
+          advanced = "          SizedBox(height: size.height * 0.025),\n          AdvancedSettingsSection(\n            isDark: isDark,\n            accentColor: _accentBlue,\n          ),\n          SizedBox(height: size.height * 0.025),\n          SizedBox(\n            width: double.infinity,\n            height: size.height * 0.065,"
+
+          if marker not in text:
+              raise SystemExit('Settings insertion marker not found')
+          text = text.replace(marker, advanced, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit Batch 4 integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/home_screen.dart
+          git diff --cached --quiet && exit 0
+          git commit -m "Integrate Batch 4 responsive settings and motion"
+          git push
