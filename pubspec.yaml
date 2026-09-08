@@ -19,11 +19,12 @@ dependencies:
   camera: ^0.11.2+1
   flutter_screen_recording: ^2.0.25
 
-  # Notebooks (Gemini-powered NotebookLM-style feature)
+  # Notebooks
   http: ^1.2.2
   file_picker: ^8.1.2
   flutter_tts: ^4.2.0
   uuid: ^4.5.1
+  speech_to_text: ^7.4.0
 
   # App update + Studio exports
   package_info_plus: ^8.3.1
