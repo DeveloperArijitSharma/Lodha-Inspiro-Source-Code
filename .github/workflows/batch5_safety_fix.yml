@@ -1,0 +1,34 @@
+name: Fix Batch 5 recording state
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Add Batch 5 recording safety fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch recording state handling
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('lib/classroom/classwork_session_screen.dart')
+          text = p.read_text()
+          old = """    setState(() => _starting = true);\n    try {\n      if (_answerController.text.trim().isEmpty) {\n        throw Exception('Please finish the written work before submitting.');\n      }\n      final path = await FlutterScreenRecording.stopRecordScreen;"""
+          new = """    if (_answerController.text.trim().isEmpty) {\n      setState(() => _error = 'Please finish the written work before submitting.');\n      return;\n    }\n    setState(() => _starting = true);\n    try {\n      final path = await FlutterScreenRecording.stopRecordScreen;"""
+          if old not in text:
+              raise SystemExit('recording stop safety marker not found')
+          text = text.replace(old, new, 1)
+          p.write_text(text)
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/classroom/classwork_session_screen.dart
+          git commit -m "Fix Batch 5 recording safety state"
+          git push
