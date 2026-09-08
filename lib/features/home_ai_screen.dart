@@ -6,7 +6,8 @@ import '../widgets/voice_text_button.dart';
 
 class HomeAiScreen extends StatefulWidget {
   const HomeAiScreen({super.key});
-  @override State<HomeAiScreen> createState() => _HomeAiScreenState();
+  @override
+  State<HomeAiScreen> createState() => _HomeAiScreenState();
 }
 
 class _HomeAiScreenState extends State<HomeAiScreen> {
@@ -18,76 +19,303 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
   bool _webSearch = true;
 
   @override
-  void dispose() { _controller.dispose(); _scroll.dispose(); super.dispose(); }
+  void dispose() {
+    _controller.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
 
   Future<void> _ask([String? value]) async {
     final prompt = (value ?? _controller.text).trim();
     if (prompt.isEmpty || _loading) return;
     _controller.clear();
-    setState(() { _messages.add(_HomeMessage(true, prompt)); _loading = true; });
+    setState(() {
+      _messages.add(_HomeMessage(true, prompt));
+      _loading = true;
+    });
     _scrollDown();
     try {
-      final history = _messages.map((m) => ChatMessage(
-        id: '${m.user ? 'u' : 'a'}-${m.text.hashCode}-${m.text.length}',
-        isUser: m.user,
-        text: m.text,
-        createdAt: DateTime.now(),
-      )).toList();
-      final answer = await _ai.askGeneral(prompt: prompt, history: history, webSearch: _webSearch);
-      if (mounted) setState(() => _messages.add(_HomeMessage(false, answer)));
+      final history = _messages.map((m) {
+        return ChatMessage(
+          id: '${m.user ? 'u' : 'a'}-${m.text.hashCode}',
+          isUser: m.user,
+          text: m.text,
+          createdAt: DateTime.now(),
+        );
+      }).toList(growable: false);
+      final answer = await _ai.askGeneral(
+        prompt: prompt,
+        history: history,
+        webSearch: _webSearch,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_HomeMessage(false, answer));
+        _loading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => _messages.add(_HomeMessage(false, '$e')));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-      _scrollDown();
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_HomeMessage(false, e.toString()));
+        _loading = false;
+      });
     }
+    _scrollDown();
   }
 
   void _scrollDown() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final text = dark ? Colors.white : const Color(0xFF172033);
+    final textColor = dark ? Colors.white : const Color(0xFF172033);
+    final panel = dark ? const Color(0xFF0C2742) : Colors.white;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
         child: Container(
-          height: MediaQuery.of(context).size.height * .70,
+          height: MediaQuery.of(context).size.height * 0.70,
           decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: dark ? [const Color(0xFF0C2742).withOpacity(.88), const Color(0xFF211A45).withOpacity(.86)] : [Colors.white.withOpacity(.88), const Color(0xFFE5F6FF).withOpacity(.88)]),
+            color: panel.withOpacity(dark ? 0.82 : 0.90),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withOpacity(dark ? .18 : .75), width: 1.2),
+            border: Border.all(
+              color: Colors.white.withOpacity(dark ? 0.18 : 0.75),
+            ),
           ),
-          child: Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(18,18,14,10), child: Row(children: [
-              Container(width:44,height:44,decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF32C5FF),Color(0xFF645CFF)]),borderRadius:BorderRadius.circular(15)),child:const Icon(Icons.auto_awesome_rounded,color:Colors.white)),
-              const SizedBox(width:12),
-              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Inspiro AI',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold,fontFamily:'Google Sans Flex',color:text)),Text('Your study chat',style:TextStyle(fontSize:13,color:dark?Colors.white60:Colors.black54,fontFamily:'Google Sans Flex'))])),
-              Icon(Icons.circle,size:9,color:_loading?Colors.orangeAccent:Colors.greenAccent),const SizedBox(width:5),Text(_loading?'Thinking':'Ready',style:TextStyle(fontSize:12,color:text,fontFamily:'Google Sans Flex')),
-            ])),
-            Expanded(child:_messages.isEmpty ? _emptyState(text,dark) : ListView.builder(controller:_scroll,padding:const EdgeInsets.fromLTRB(16,8,16,12),itemCount:_messages.length+(_loading?1:0),itemBuilder:(context,i){if(i>=_messages.length)return _bubble('Thinking…',false,dark,text,true);final m=_messages[i];return _bubble(m.text,m.user,dark,text,false); })),
-            Padding(padding:const EdgeInsets.fromLTRB(12,4,12,12),child:Column(children:[
-              Row(children:[Icon(Icons.travel_explore_rounded,size:18,color:_webSearch?const Color(0xFF32C5FF):Colors.grey),const SizedBox(width:6),Text('Web search',style:TextStyle(fontSize:12,color:text,fontFamily:'Google Sans Flex')),const Spacer(),Switch(value:_webSearch,onChanged:_loading?null:(v)=>setState(()=>_webSearch=v))]),
-              ClipRRect(borderRadius:BorderRadius.circular(26),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:18,sigmaY:18),child:Container(decoration:BoxDecoration(color:dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.72),borderRadius:BorderRadius.circular(26),border:Border.all(color:Colors.white.withOpacity(.3))),child:Row(children:[
-                Expanded(child:TextField(controller:_controller,minLines:1,maxLines:4,onSubmitted:(_)=>_ask(),style:TextStyle(color:text,fontFamily:'Google Sans Flex'),decoration:InputDecoration(hintText:'Message Inspiro AI…',hintStyle:TextStyle(color:dark?Colors.white54:Colors.black45),border:InputBorder.none,contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:13))),
-                VoiceTextButton(controller:_controller),IconButton(onPressed:_loading?null:_ask,icon:const Icon(Icons.arrow_upward_rounded,color:Color(0xFF32C5FF))),
-              ]))))
-            ])),
-          ]),
+          child: Column(
+            children: [
+              _buildHeader(dark, textColor),
+              Expanded(child: _buildMessages(dark, textColor)),
+              _buildComposer(dark, textColor),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _emptyState(Color text,bool dark)=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.auto_awesome_rounded,size:42,color:Color(0xFF32C5FF)),const SizedBox(height:12),Text('What can I help you study?',textAlign:TextAlign.center,style:TextStyle(fontSize:21,fontWeight:FontWeight.w700,fontFamily:'Google Sans Flex')),const SizedBox(height:8),Text('Ask anything, get explanations, or search the live web.',textAlign:TextAlign.center,style:TextStyle(color:dark?Colors.white60:Colors.black54,fontFamily:'Google Sans Flex')),const SizedBox(height:18),Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.center,children:['Explain photosynthesis','Make me a quick quiz','What happened today?'].map((q)=>ActionChip(label:Text(q),onPressed:()=>_ask(q))).toList())])));
+  Widget _buildHeader(bool dark, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 18, 14, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF32C5FF), Color(0xFF645CFF)],
+              ),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Inspiro AI',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                    fontFamily: 'Google Sans Flex',
+                  ),
+                ),
+                Text(
+                  'Your study chat',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: dark ? Colors.white60 : Colors.black54,
+                    fontFamily: 'Google Sans Flex',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.circle,
+            size: 9,
+            color: _loading ? Colors.orangeAccent : Colors.greenAccent,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            _loading ? 'Thinking' : 'Ready',
+            style: TextStyle(color: textColor, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _bubble(String value,bool user,bool dark,Color text,bool loading)=>Align(alignment:user?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),decoration:BoxDecoration(gradient:user?const LinearGradient(colors:[Color(0xFF32C5FF),Color(0xFF5963FF)]):null,color:user?null:(dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.68)),borderRadius:BorderRadius.circular(21),border:Border.all(color:Colors.white.withOpacity(.2))),child:loading?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):Text(value,style:TextStyle(color:user?Colors.white:text,fontFamily:'Google Sans Flex',height:1.4))));
+  Widget _buildMessages(bool dark, Color textColor) {
+    if (_messages.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome_rounded, size: 42, color: Color(0xFF32C5FF)),
+              const SizedBox(height: 12),
+              Text(
+                'What can I help you study?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  fontFamily: 'Google Sans Flex',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ask anything, get explanations, or search the live web.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: dark ? Colors.white60 : Colors.black54),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  'Explain photosynthesis',
+                  'Make me a quick quiz',
+                  'What happened today?',
+                ].map((q) {
+                  return ActionChip(label: Text(q), onPressed: () => _ask(q));
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scroll,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      itemCount: _messages.length + (_loading ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _messages.length) {
+          return _bubble('Thinking...', false, dark, textColor, true);
+        }
+        final message = _messages[index];
+        return _bubble(message.text, message.user, dark, textColor, false);
+      },
+    );
+  }
+
+  Widget _buildComposer(bool dark, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.travel_explore_rounded,
+                size: 18,
+                color: _webSearch ? const Color(0xFF32C5FF) : Colors.grey,
+              ),
+              const SizedBox(width: 6),
+              Text('Web search', style: TextStyle(color: textColor, fontSize: 12)),
+              const Spacer(),
+              Switch(
+                value: _webSearch,
+                onChanged: _loading ? null : (value) => setState(() => _webSearch = value),
+              ),
+            ],
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: dark ? Colors.white.withOpacity(0.09) : Colors.white.withOpacity(0.72),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 4,
+                        onSubmitted: (_) => _ask(),
+                        style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'),
+                        decoration: InputDecoration(
+                          hintText: 'Message Inspiro AI...',
+                          hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                        ),
+                      ),
+                    ),
+                    VoiceTextButton(controller: _controller),
+                    IconButton(
+                      onPressed: _loading ? null : _ask,
+                      icon: const Icon(Icons.arrow_upward_rounded, color: Color(0xFF32C5FF)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bubble(String value, bool user, bool dark, Color textColor, bool loading) {
+    return Align(
+      alignment: user ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: user
+              ? const LinearGradient(colors: [Color(0xFF32C5FF), Color(0xFF5963FF)])
+              : null,
+          color: user ? null : (dark ? Colors.white.withOpacity(0.09) : Colors.white.withOpacity(0.68)),
+          borderRadius: BorderRadius.circular(21),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: loading
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text(
+                value,
+                style: TextStyle(
+                  color: user ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  height: 1.4,
+                ),
+              ),
+      ),
+    );
+  }
 }
 
-class _HomeMessage { final bool user; final String text; const _HomeMessage(this.user,this.text); }
+class _HomeMessage {
+  final bool user;
+  final String text;
+  const _HomeMessage(this.user, this.text);
+}
