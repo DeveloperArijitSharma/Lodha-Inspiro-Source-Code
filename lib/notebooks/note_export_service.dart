@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -12,32 +13,61 @@ import 'package:share_plus/share_plus.dart';
 import 'notebook_models.dart';
 
 class NoteExportService {
+  static const _nativeChannel = MethodChannel('lodha_inspiro/native');
+
   static Future<void> export({required NotebookNote note, required String format}) async {
     final safeTitle = note.title.replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '').trim();
     final title = safeTitle.isEmpty ? 'Inspiro Note' : safeTitle;
+    final extension = _extensionFor(format);
+    final mimeType = _mimeTypeFor(format);
+    final bytes = await _bytesFor(note, format);
+    final fileName = '$title.$extension';
+
+    if (Platform.isAndroid) {
+      final savedUri = await _nativeChannel.invokeMethod<String>('saveToDownloads', {
+        'fileName': fileName,
+        'mimeType': mimeType,
+        'bytes': bytes,
+      });
+      if (savedUri != null && savedUri.isNotEmpty) return;
+    }
+
     final dir = await getTemporaryDirectory();
-    late final File file;
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(bytes, flush: true);
+    await Share.shareXFiles([XFile(file.path)], text: note.title);
+  }
+
+  static Future<Uint8List> _bytesFor(NotebookNote note, String format) {
     switch (format) {
       case 'pdf':
-        file = File('${dir.path}/$title.pdf');
-        await file.writeAsBytes(await _pdf(note));
-        break;
+        return _pdf(note);
       case 'docx':
-        file = File('${dir.path}/$title.docx');
-        await file.writeAsBytes(_docx(note));
-        break;
+        return Future.value(_docx(note));
       case 'pptx':
-        file = File('${dir.path}/$title.pptx');
-        await file.writeAsBytes(_pptx(note));
-        break;
+        return Future.value(_pptx(note));
       case 'png':
-        file = File('${dir.path}/$title.png');
-        await file.writeAsBytes(await _png(note));
-        break;
+        return _png(note);
       default:
         throw ArgumentError('Unsupported export format.');
     }
-    await Share.shareXFiles([XFile(file.path)], text: note.title);
+  }
+
+  static String _extensionFor(String format) => format == 'docx' ? 'docx' : format;
+
+  static String _mimeTypeFor(String format) {
+    switch (format) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'pptx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'png':
+        return 'image/png';
+      default:
+        throw ArgumentError('Unsupported export format.');
+    }
   }
 
   static Future<Uint8List> _pdf(NotebookNote note) async {
