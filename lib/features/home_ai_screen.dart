@@ -14,13 +14,14 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
   final _ai = GeminiService.instance;
   String? _answer;
   bool _loading = false;
+  bool _webSearch = false;
 
   Future<void> _ask() async {
     final prompt = _controller.text.trim();
     if (prompt.isEmpty || _loading) return;
     setState(() => _loading = true);
     try {
-      final answer = await _ai.askGeneral(prompt: prompt);
+      final answer = await _ai.askGeneral(prompt: prompt, webSearch: _webSearch);
       if (mounted) setState(() => _answer = answer);
     } catch (e) {
       if (mounted) setState(() => _answer = e.toString());
@@ -60,7 +61,15 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
             ),
           ),
-          const SizedBox(height: 14),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: _webSearch,
+            onChanged: _loading ? null : (value) => setState(() => _webSearch = value),
+            title: const Text('Web search'),
+            subtitle: const Text('Let Inspiro use current web results for this question.'),
+            secondary: const Icon(Icons.travel_explore_rounded),
+          ),
+          const SizedBox(height: 8),
           FilledButton.icon(onPressed: _loading ? null : _ask, icon: const Icon(Icons.arrow_upward_rounded), label: Text(_loading ? 'Thinking…' : 'Ask Inspiro')),
           if (_answer != null) ...[
             const SizedBox(height: 22),
