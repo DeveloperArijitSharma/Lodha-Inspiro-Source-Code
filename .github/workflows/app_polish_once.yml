@@ -1,0 +1,50 @@
+name: One-time app polish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch notebook AI experience
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('lib/notebooks/notebook_detail_screen.dart')
+          s = p.read_text()
+
+          old = """  Widget _buildChatEmptyState(bool isDark, Color textColor) {\n    return ListView(\n      padding: const EdgeInsets.all(24),\n      children: [\n        const SizedBox(height: 40),\n        Icon(Icons.chat_bubble_outline_rounded,\n            size: 48, color: _accentBlue.withOpacity(0.6)),\n        const SizedBox(height: 16),\n        Text(\n          _generalAskMode\n              ? 'Ask Gemini anything. This mode is separate from your notebook sources and can browse the web.'\n              : (_sources.isEmpty\n                  ? 'Add a source first, then ask anything about it.'\n                  : 'Ask anything grounded in your sources.'),\n          textAlign: TextAlign.center,\n          style: TextStyle(\n              color: isDark ? Colors.white60 : Colors.black54,\n              fontFamily: 'Google Sans Flex'),\n        ),\n        if (!_generalAskMode && _suggestedQuestions.isNotEmpty) ...[\n          const SizedBox(height: 20),\n          Wrap(\n            alignment: WrapAlignment.center,\n            spacing: 8,\n            runSpacing: 8,\n            children: _suggestedQuestions\n                .map((q) => ActionChip(\n                      label: Text(q,\n                          style:\n                              const TextStyle(fontFamily: 'Google Sans Flex')),\n                      backgroundColor: _accentBlue.withOpacity(0.12),\n                      onPressed: () => _sendMessage(q),\n                    ))\n                .toList(),\n          ),\n        ],\n      ],\n    );\n  }"""
+
+          new = """  Widget _buildChatEmptyState(bool isDark, Color textColor) {\n    final topic = widget.notebook.title.trim().isEmpty ? 'this topic' : widget.notebook.title.trim();\n    final topicQuestions = <String>[\n      'What are the key ideas in $topic?',\n      'Explain $topic in simple student-friendly words.',\n      'What are the most important facts about $topic?',\n      'Give me a quick quiz question about $topic.',\n    ];\n    final questions = _generalAskMode ? topicQuestions : _suggestedQuestions;\n    return ListView(\n      padding: const EdgeInsets.all(24),\n      children: [\n        const SizedBox(height: 28),\n        Icon(_generalAskMode ? Icons.travel_explore_rounded : Icons.chat_bubble_outline_rounded,\n            size: 48, color: _accentBlue.withOpacity(0.72)),\n        const SizedBox(height: 14),\n        Text(\n          _generalAskMode\n              ? 'Ask AI + Web about $topic. Try one of these questions:'\n              : (_sources.isEmpty\n                  ? 'Add a source first, then ask anything about it.'\n                  : 'Ask anything grounded in your sources.'),\n          textAlign: TextAlign.center,\n          style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontFamily: 'Google Sans Flex', height: 1.4),\n        ),\n        if (questions.isNotEmpty) ...[\n          const SizedBox(height: 20),\n          Wrap(\n            alignment: WrapAlignment.center,\n            spacing: 8,\n            runSpacing: 8,\n            children: questions.take(4).map((q) => ActionChip(\n              label: Text(q, style: const TextStyle(fontFamily: 'Google Sans Flex')),\n              backgroundColor: _accentBlue.withOpacity(0.12),\n              onPressed: () => _sendMessage(q),\n            )).toList(),\n          ),\n        ],\n      ],\n    );\n  }"""
+          if old not in s:
+              raise SystemExit('chat empty state pattern not found')
+          s = s.replace(old, new, 1)
+
+          old2 = """label: const Text('Create classwork'),"""
+          new2 = """label: const Text('Create AI classwork from this notebook'),"""
+          if old2 not in s:
+              raise SystemExit('studio button pattern not found')
+          s = s.replace(old2, new2, 1)
+
+          old3 = """_buildStudioCard(\n          isDark: isDark,\n          textColor: textColor,\n          icon: Icons.auto_awesome_rounded,\n          title: 'AI Classwork',"""
+          new3 = """_buildStudioCard(\n          isDark: isDark,\n          textColor: textColor,\n          icon: Icons.auto_awesome_rounded,\n          title: 'AI Classwork Studio',"""
+          if old3 in s:
+              s = s.replace(old3, new3, 1)
+
+          p.write_text(s)
+          PY
+      - name: Commit notebook polish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/notebooks/notebook_detail_screen.dart
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: improve notebook AI questions and classwork studio"
+          git push
