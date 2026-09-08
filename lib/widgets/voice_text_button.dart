@@ -10,11 +10,11 @@ class VoiceTextButton extends StatefulWidget {
   const VoiceTextButton({
     super.key,
     required this.controller,
-    this.accentColor = const Color(0xFF32C5FF),
+    Color? accentColor,
     this.enabled = true,
     this.localeId = 'en_IN',
     Color? color,
-  }) : accentColor = color ?? accentColor;
+  }) : accentColor = color ?? accentColor ?? const Color(0xFF32C5FF);
 
   @override
   State<VoiceTextButton> createState() => _VoiceTextButtonState();
