@@ -6,6 +6,7 @@ class VoiceTextButton extends StatefulWidget {
   final Color accentColor;
   final bool enabled;
   final String localeId;
+  final String? tooltip;
 
   const VoiceTextButton({
     super.key,
@@ -14,6 +15,7 @@ class VoiceTextButton extends StatefulWidget {
     this.enabled = true,
     this.localeId = 'en_IN',
     Color? color,
+    this.tooltip,
   }) : accentColor = color ?? accentColor ?? const Color(0xFF32C5FF);
 
   @override
@@ -67,7 +69,7 @@ class _VoiceTextButtonState extends State<VoiceTextButton> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: _listening ? 'Stop voice input' : 'Voice input',
+      tooltip: widget.tooltip ?? (_listening ? 'Stop voice input' : 'Voice input'),
       onPressed: widget.enabled ? _toggle : null,
       icon: Icon(
         _listening ? Icons.stop_circle_rounded : Icons.mic_none_rounded,
