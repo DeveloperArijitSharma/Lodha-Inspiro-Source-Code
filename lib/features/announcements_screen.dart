@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,9 +12,14 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   final _client = Supabase.instance.client;
   bool _loading = true;
   List<Map<String, dynamic>> _items = [];
+  StreamSubscription<List<Map<String, dynamic>>>? _subscription;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    _subscribe();
+  }
 
   Future<void> _load() async {
     try {
@@ -24,6 +30,22 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _subscribe() {
+    try {
+      _subscription = _client.from('announcements').stream(primaryKey: ['id']).order('created_at', ascending: false).listen((rows) {
+        if (mounted) setState(() => _items = rows);
+      });
+    } catch (_) {
+      // Realtime is optional. Manual refresh still works.
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 
   @override
