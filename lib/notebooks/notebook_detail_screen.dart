@@ -9,6 +9,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:uuid/uuid.dart';
 
 import '../gemini/gemini_service.dart';
+import '../features/ai_classwork_generator.dart';
+import '../widgets/voice_text_button.dart';
+import '../classroom/generated_classwork_screen.dart';
 import 'notebook_models.dart';
 import 'notebook_quiz_screen.dart';
 import 'notebook_repository.dart';
@@ -348,6 +351,40 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
             duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
       }
     });
+  }
+
+  Future<void> _generateAiClasswork() async {
+    final topicController = TextEditingController();
+    final topic = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create classwork with AI'),
+        content: TextField(
+          controller: topicController,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Topic, e.g. Photosynthesis'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, topicController.text.trim()), child: const Text('Generate')),
+        ],
+      ),
+    );
+    topicController.dispose();
+    if (topic == null || topic.trim().isEmpty) return;
+    try {
+      _toast('Creating classwork…');
+      final generated = await AiClassworkGenerator().generate(topic: topic, questionCount: 5);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => GeneratedClassworkScreen(classwork: generated)),
+      );
+    } on GeminiException catch (e) {
+      _toast(e.message, error: true);
+    } catch (_) {
+      _toast('Could not create classwork.', error: true);
+    }
   }
 
   Future<void> _generateSummary() async {
@@ -1032,6 +1069,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
+                VoiceTextButton(controller: _chatController, color: _accentBlue, tooltip: 'Speak your question'),
                 IconButton(
                   icon: const Icon(Icons.send_rounded, color: _accentBlue),
                   onPressed: _sendingMessage ? null : () => _sendMessage(),
@@ -1048,6 +1086,26 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        _buildStudioCard(
+          isDark: isDark,
+          textColor: textColor,
+          icon: Icons.auto_awesome_rounded,
+          title: 'AI Classwork',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Turn a topic into a student-friendly assignment, then complete it in the app.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontFamily: 'Google Sans Flex', height: 1.4)),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _generateAiClasswork,
+                style: ElevatedButton.styleFrom(backgroundColor: _accentBlue, foregroundColor: Colors.white),
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: const Text('Create classwork'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
         _buildStudioCard(
           isDark: isDark,
           textColor: textColor,

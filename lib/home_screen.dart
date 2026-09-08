@@ -10,6 +10,9 @@ import 'classroom/classroom_screen.dart';
 import 'classroom/teacher_recordings_screen.dart';
 import 'app_preferences.dart';
 import 'widgets/advanced_settings_section.dart';
+import 'features/home_ai_screen.dart';
+import 'features/announcements_screen.dart';
+import 'classroom/demo_classwork_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -242,47 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader('Live classes', textColor),
           SizedBox(height: size.height * 0.025),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(size.width * 0.06),
-            decoration: BoxDecoration(
-                color: const Color(0xFFD3B4FF),
-                borderRadius: BorderRadius.circular(size.width * 0.08)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Start',
-                    style: TextStyle(
-                        color: Color(0xFF1E1E1E),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Google Sans Flex')),
-                SizedBox(height: size.height * 0.015),
-                Text(
-                    'Find the right level\nand book your first\nfree group class',
-                    style: TextStyle(
-                        color: const Color(0xFF1E1E1E),
-                        fontSize: size.width * 0.055,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                        fontFamily: 'Google Sans Flex')),
-                SizedBox(height: size.height * 0.025),
-                ElevatedButton(
-                  onPressed: () =>
-                      _showGlassSnackBar('Level Finder coming soon! 🚀'),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E1E1E),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24))),
-                  child: const Text('Find level',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Google Sans Flex')),
-                ),
-              ],
-            ),
-          ),
+          const HomeAiScreen(),
         ],
       ),
     );
@@ -292,7 +255,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       key: const ValueKey(1),
       padding: EdgeInsets.only(bottom: size.height * 0.11),
-      child: const ClassroomScreen(),
+      child: Column(
+        children: [
+          Expanded(child: const ClassroomScreen()),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemoClassworkScreen())),
+                icon: const Icon(Icons.science_rounded),
+                label: const Text('Try demo classwork', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -888,7 +866,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         GestureDetector(
-          onTap: () => _showGlassSnackBar('Announcements coming soon! 🚀'),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
