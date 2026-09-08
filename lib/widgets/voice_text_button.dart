@@ -13,7 +13,8 @@ class VoiceTextButton extends StatefulWidget {
     this.accentColor = const Color(0xFF32C5FF),
     this.enabled = true,
     this.localeId = 'en_IN',
-  });
+    Color? color,
+  }) : accentColor = color ?? accentColor;
 
   @override
   State<VoiceTextButton> createState() => _VoiceTextButtonState();
@@ -21,7 +22,6 @@ class VoiceTextButton extends StatefulWidget {
 
 class _VoiceTextButtonState extends State<VoiceTextButton> {
   final stt.SpeechToText _speech = stt.SpeechToText();
-  bool _ready = false;
   bool _listening = false;
   String _baseText = '';
 
@@ -47,12 +47,7 @@ class _VoiceTextButtonState extends State<VoiceTextButton> {
     if (!available) return;
 
     _baseText = widget.controller.text.trim();
-    if (mounted) {
-      setState(() {
-        _ready = true;
-        _listening = true;
-      });
-    }
+    if (mounted) setState(() => _listening = true);
 
     await _speech.listen(
       localeId: widget.localeId,
