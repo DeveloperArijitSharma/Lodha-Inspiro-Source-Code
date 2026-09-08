@@ -3,10 +3,13 @@ package com.example.lodha_inspiro
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -44,6 +47,16 @@ class MainActivity : FlutterActivity() {
                             result.success(false)
                         } else {
                             result.success(installApk(path))
+                        }
+                    }
+                    "saveToDownloads" -> {
+                        val fileName = call.argument<String>("fileName")
+                        val mimeType = call.argument<String>("mimeType")
+                        val bytes = call.argument<List<*>>("bytes")
+                        if (fileName.isNullOrBlank() || mimeType.isNullOrBlank() || bytes == null) {
+                            result.error("INVALID_ARGUMENTS", "A filename, MIME type, and bytes are required.", null)
+                        } else {
+                            result.success(saveToDownloads(fileName, mimeType, bytes))
                         }
                     }
                     else -> result.notImplemented()
@@ -100,6 +113,36 @@ class MainActivity : FlutterActivity() {
                 description = "Notifications for new Lodha Inspiro chat messages"
             }
             manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun saveToDownloads(fileName: String, mimeType: String, bytes: List<*>): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+
+        val safeName = fileName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, safeName)
+            put(MediaStore.Downloads.MIME_TYPE, mimeType)
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Lodha Inspiro")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+
+        val resolver = contentResolver
+        val uri: Uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return null
+
+        return try {
+            resolver.openOutputStream(uri)?.use { output ->
+                bytes.forEach { value -> output.write((value as Number).toInt()) }
+            } ?: throw IllegalStateException("Could not open Downloads output stream.")
+
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            uri.toString()
+        } catch (error: Exception) {
+            resolver.delete(uri, null, null)
+            throw error
         }
     }
 
