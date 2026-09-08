@@ -1,0 +1,106 @@
+name: Integrate Batch 5 monitored classwork
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.event.head_commit.message == 'Add Batch 5 monitored classwork foundation'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch navigation and monitored classwork
+        shell: python
+        run: |
+          from pathlib import Path
+
+          home = Path('lib/home_screen.dart')
+          text = home.read_text()
+
+          text = text.replace(
+              "import 'notebooks/notebooks_list_screen.dart';\n",
+              "import 'notebooks/notebooks_list_screen.dart';\nimport 'classroom/classroom_screen.dart';\nimport 'classroom/teacher_recordings_screen.dart';\n"
+          )
+
+          old = """            Positioned(\n              left: size.width * 0.04,\n              right: size.width * 0.04,\n              bottom: size.height * 0.02,\n              child: _buildLiquidGlassNavBar(size, isDark),\n            ),"""
+          new = """            if (_currentIndex != 3)\n              Positioned(\n                left: size.width * 0.04,\n                right: size.width * 0.04,\n                bottom: size.height * 0.02,\n                child: _buildLiquidGlassNavBar(size, isDark),\n              ),"""
+          if old not in text:
+              raise SystemExit('home nav visibility marker not found')
+          text = text.replace(old, new, 1)
+
+          old = """  Widget _buildClassworkScreenContent(Size size, double padding, bool isDark) {\n    // 🚀 Notebooks: Gemini-grounded study notebooks (NotebookLM-style).\n    // Lives inside the bottom-nav bounds, padded so it clears the floating\n    // liquid glass nav bar at the bottom.\n    return Padding(\n      key: const ValueKey(1),\n      padding: EdgeInsets.only(bottom: size.height * 0.11),\n      child: const NotebooksListScreen(),\n    );\n  }"""
+          new = """  Widget _buildClassworkScreenContent(Size size, double padding, bool isDark) {\n    return Padding(\n      key: const ValueKey(1),\n      padding: EdgeInsets.only(bottom: size.height * 0.11),\n      child: const ClassroomScreen(),\n    );\n  }"""
+          if old not in text:
+              raise SystemExit('home classwork marker not found')
+          text = text.replace(old, new, 1)
+
+          old = """                    _buildSidebarItem(\n                        icon: Icons.auto_awesome_rounded,\n                        title: 'Notebooks',\n                        index: 1,\n                        isDark: isDark),\n                    SizedBox(height: size.height * 0.01),\n                    _buildSidebarItem(\n                        icon: Icons.chat_bubble_rounded,\n                        title: 'Messages',\n                        index: 2,\n                        isDark: isDark),\n                    const Spacer(),"""
+          new = """                    _buildSidebarItem(\n                        icon: Icons.assignment_rounded,\n                        title: 'Classwork',\n                        index: 1,\n                        isDark: isDark),\n                    SizedBox(height: size.height * 0.01),\n                    ListTile(\n                      leading: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white60 : Colors.black54),\n                      title: const Text('Notebooks', style: TextStyle(fontFamily: 'Google Sans Flex')),\n                      onTap: () {\n                        Navigator.pop(context);\n                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotebooksListScreen()));\n                      },\n                    ),\n                    SizedBox(height: size.height * 0.01),\n                    _buildSidebarItem(\n                        icon: Icons.chat_bubble_rounded,\n                        title: 'Messages',\n                        index: 2,\n                        isDark: isDark),\n                    SizedBox(height: size.height * 0.01),\n                    _buildSidebarItem(\n                        icon: Icons.settings_outlined,\n                        title: 'Settings',\n                        index: 3,\n                        isDark: isDark),\n                    if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[\n                      SizedBox(height: size.height * 0.01),\n                      ListTile(\n                        leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54),\n                        title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')),\n                        onTap: () {\n                          Navigator.pop(context);\n                          Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen()));\n                        },\n                      ),\n                    ],\n                    const Spacer(),"""
+          if old not in text:
+              raise SystemExit('sidebar navigation marker not found')
+          text = text.replace(old, new, 1)
+
+          old = """                  _buildGlassNavItem(0, Icons.home_rounded, 'Home', isDark),\n                  _buildGlassNavItem(\n                      1, Icons.auto_awesome_rounded, 'Notebooks', isDark),\n                  _buildGlassNavItem(\n                      2, Icons.chat_bubble_outline_rounded, 'Chat', isDark),\n                  _buildGlassNavItem(\n                      3, Icons.settings_outlined, 'Settings', isDark),"""
+          new = """                  _buildGlassNavItem(0, Icons.home_rounded, 'Home', isDark),\n                  _buildGlassNavItem(\n                      1, Icons.assignment_rounded, 'Classwork', isDark),\n                  _buildGlassNavItem(\n                      2, Icons.chat_bubble_outline_rounded, 'Chat', isDark),"""
+          if old not in text:
+              raise SystemExit('bottom navigation marker not found')
+          text = text.replace(old, new, 1)
+
+          text = text.replace(
+              "duration: const Duration(milliseconds: 250),",
+              "duration: smoothMotionNotifier.value ? const Duration(milliseconds: 160) : Duration.zero,",
+              1,
+          )
+
+          home.write_text(text)
+
+          classroom = Path('lib/classroom/classroom_screen.dart')
+          text = classroom.read_text()
+          if "import 'classwork_session_screen.dart';" not in text:
+              text = text.replace("import 'classroom_repository.dart';\n", "import 'classroom_repository.dart';\nimport 'classwork_session_screen.dart';\n")
+
+          marker = """            const SizedBox(height: 18),\n            TextField("""
+          replacement = """            const SizedBox(height: 14),\n            SizedBox(\n              width: double.infinity,\n              child: OutlinedButton.icon(\n                onPressed: _saving ? null : () {\n                  Navigator.pop(context);\n                  Navigator.push(context, MaterialPageRoute(builder: (_) => ClassworkSessionScreen(assignment: widget.assignment)));\n                },\n                icon: const Icon(Icons.screen_record_rounded),\n                label: const Text('Start monitored work', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),\n                style: OutlinedButton.styleFrom(\n                  foregroundColor: widget.accentBlue,\n                  side: BorderSide(color: widget.accentBlue.withOpacity(0.45)),\n                  padding: const EdgeInsets.symmetric(vertical: 14),\n                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),\n                ),\n              ),\n            ),\n            const SizedBox(height: 14),\n            TextField("""
+          if marker not in text:
+              raise SystemExit('assignment monitored-work marker not found')
+          text = text.replace(marker, replacement, 1)
+          classroom.write_text(text)
+
+          session = Path('lib/classroom/classwork_session_screen.dart')
+          text = session.read_text()
+          text = text.replace(
+              "  final _supabase = Supabase.instance.client;\n",
+              "  final _supabase = Supabase.instance.client;\n  final _answerController = TextEditingController();\n"
+          )
+          text = text.replace(
+              "  void dispose() {\n    setClassworkMode(false);\n",
+              "  void dispose() {\n    _answerController.dispose();\n    setClassworkMode(false);\n"
+          )
+          text = text.replace(
+              "      final path = await FlutterScreenRecording.stopRecordScreen;\n",
+              "      if (_answerController.text.trim().isEmpty) {\n        throw Exception('Please finish the written work before submitting.');\n      }\n      final path = await FlutterScreenRecording.stopRecordScreen;\n"
+          )
+          text = text.replace(
+              "      await _uploadRecording(path, duration);\n",
+              "      await _uploadRecording(path, duration);\n      await _supabase.from('classroom_submissions').upsert({\n        'assignment_id': widget.assignment.id,\n        'student_id': _supabase.auth.currentUser!.id,\n        'text': _answerController.text.trim(),\n      }, onConflict: 'assignment_id,student_id');\n"
+          )
+          marker = """            const SizedBox(height: 16),\n            ClipRRect("""
+          replacement = """            const SizedBox(height: 16),\n            TextField(\n              controller: _answerController,\n              minLines: 6,\n              maxLines: 12,\n              enabled: !_recording,\n              style: TextStyle(color: text, fontFamily: 'Google Sans Flex'),\n              decoration: InputDecoration(\n                labelText: 'Your work',\n                hintText: 'Complete the assignment here while monitored.',\n                filled: true,\n                fillColor: isDark ? Colors.white10 : Colors.white,\n                border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),\n              ),\n            ),\n            const SizedBox(height: 16),\n            ClipRRect("""
+          if marker not in text:
+              raise SystemExit('session answer marker not found')
+          text = text.replace(marker, replacement, 1)
+          session.write_text(text)
+
+      - name: Commit Batch 5 integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/home_screen.dart lib/classroom/classroom_screen.dart lib/classroom/classwork_session_screen.dart
+          git commit -m "Integrate Batch 5 classwork navigation and monitored submissions"
+          git push
