@@ -21,7 +21,7 @@ class GeminiService {
       throw GeminiException('Inspiro AI is disabled while monitored classwork is in progress.');
     }
     if (GroqConfig.apiKey.isEmpty || GroqConfig.apiKey == 'YOUR_GROQ_API_KEY_HERE') {
-      throw GeminiException('No Groq API key set. Run with --dart-define=GROQ_API_KEY=...');
+      throw GeminiException('Groq API key is missing. Add GROQ_API_KEY as a Dart define when building the app.');
     }
 
     final textParts = parts
@@ -95,12 +95,19 @@ class GeminiService {
     return parts;
   }
 
-  Future<String> askGeneral({required String prompt, List<ChatMessage> history = const []}) async {
+  Future<String> askGeneral({
+    required String prompt,
+    List<ChatMessage> history = const [],
+    bool webSearch = true,
+  }) async {
     final transcript = history.map((m) => '${m.isUser ? "User" : "Assistant"}: ${m.text}').join('\n');
     return _generate(
-      parts: [if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'}, {'text': 'User request:\n$prompt'}],
+      parts: [
+        if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'},
+        {'text': 'User request:\n$prompt'},
+      ],
       systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. Do not invent facts.',
-      webSearch: true,
+      webSearch: webSearch,
     );
   }
 
@@ -138,7 +145,6 @@ class GeminiService {
       parts: [..._sourceParts(sources), {'text': '\nCreate $count multiple-choice questions as JSON. Each object must contain question, options (exactly 4 strings), answer (0-3), hint, and explanation.'}],
       systemInstruction: 'Return ONLY a JSON array of objects with question, options (array of exactly 4 strings), answer (0-3), hint, and explanation. Use only the provided source material. Keep hints and explanations concise.',
     );
-
     dynamic decoded;
     try {
       decoded = jsonDecode(raw);
@@ -147,7 +153,6 @@ class GeminiService {
       decoded = jsonDecode(cleaned);
     }
     if (decoded is! List) throw GeminiException('Groq returned an invalid quiz format.');
-
     return decoded.map<NotebookQuizQuestion>((item) {
       if (item is! Map) throw GeminiException('Groq returned an invalid quiz question.');
       final map = Map<String, dynamic>.from(item);
@@ -156,12 +161,7 @@ class GeminiService {
       final options = rawOptions.map<QuizOption>((option) => QuizOption(text: option.toString(), why: map['explanation']?.toString() ?? '')).toList();
       final answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
       if (answer < 0 || answer > 3) throw GeminiException('Groq returned an invalid correct answer index.');
-      return NotebookQuizQuestion(
-        question: map['question']?.toString() ?? '',
-        options: options,
-        correctIndex: answer,
-        hint: map['hint']?.toString() ?? '',
-      );
+      return NotebookQuizQuestion(question: map['question']?.toString() ?? '', options: options, correctIndex: answer, hint: map['hint']?.toString() ?? '');
     }).toList();
   }
 
