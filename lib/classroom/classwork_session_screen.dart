@@ -24,6 +24,7 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
   DateTime? _startedAt;
   String? _error;
   final _supabase = Supabase.instance.client;
+  final _answerController = TextEditingController();
   final _accent = const Color(0xFF32C5FF);
 
   @override
@@ -97,9 +98,17 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
     if (!_recording) return;
     setState(() => _starting = true);
     try {
+      if (_answerController.text.trim().isEmpty) {
+        throw Exception('Please finish the written work before submitting.');
+      }
       final path = await FlutterScreenRecording.stopRecordScreen;
       final duration = _startedAt == null ? null : DateTime.now().difference(_startedAt!).inSeconds;
       await _uploadRecording(path, duration);
+      await _supabase.from('classroom_submissions').upsert({
+        'assignment_id': widget.assignment.id,
+        'student_id': _supabase.auth.currentUser!.id,
+        'text': _answerController.text.trim(),
+      }, onConflict: 'assignment_id,student_id');
       setClassworkMode(false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Classwork recording submitted to your teacher.')));
@@ -140,6 +149,7 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
 
   @override
   void dispose() {
+    _answerController.dispose();
     setClassworkMode(false);
     _cameraController?.dispose();
     super.dispose();
@@ -179,6 +189,21 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
                 Text(widget.assignment.description!, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, height: 1.35)),
               ],
             ])),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _answerController,
+              minLines: 6,
+              maxLines: 12,
+              enabled: !_recording,
+              style: TextStyle(color: text, fontFamily: 'Google Sans Flex'),
+              decoration: InputDecoration(
+                labelText: 'Your work',
+                hintText: 'Complete the assignment here while monitored.',
+                filled: true,
+                fillColor: isDark ? Colors.white10 : Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+              ),
+            ),
             const SizedBox(height: 16),
             ClipRRect(
               borderRadius: BorderRadius.circular(28),

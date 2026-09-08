@@ -6,6 +6,8 @@ import 'chat_screen.dart';
 import 'login_screen.dart';
 import 'main.dart';
 import 'notebooks/notebooks_list_screen.dart';
+import 'classroom/classroom_screen.dart';
+import 'classroom/teacher_recordings_screen.dart';
 import 'app_preferences.dart';
 import 'widgets/advanced_settings_section.dart';
 
@@ -175,12 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: ValueKey<int>(_currentIndex)),
               ),
             ),
-            Positioned(
-              left: size.width * 0.04,
-              right: size.width * 0.04,
-              bottom: size.height * 0.02,
-              child: _buildLiquidGlassNavBar(size, isDark),
-            ),
+            if (_currentIndex != 3)
+              Positioned(
+                left: size.width * 0.04,
+                right: size.width * 0.04,
+                bottom: size.height * 0.02,
+                child: _buildLiquidGlassNavBar(size, isDark),
+              ),
           ],
         ),
       ),
@@ -284,13 +287,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildClassworkScreenContent(Size size, double padding, bool isDark) {
-    // 🚀 Notebooks: Gemini-grounded study notebooks (NotebookLM-style).
-    // Lives inside the bottom-nav bounds, padded so it clears the floating
-    // liquid glass nav bar at the bottom.
     return Padding(
       key: const ValueKey(1),
       padding: EdgeInsets.only(bottom: size.height * 0.11),
-      child: const NotebooksListScreen(),
+      child: const ClassroomScreen(),
     );
   }
 
@@ -786,16 +786,42 @@ class _HomeScreenState extends State<HomeScreen> {
                         isDark: isDark),
                     SizedBox(height: size.height * 0.01),
                     _buildSidebarItem(
-                        icon: Icons.auto_awesome_rounded,
-                        title: 'Notebooks',
+                        icon: Icons.assignment_rounded,
+                        title: 'Classwork',
                         index: 1,
                         isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    ListTile(
+                      leading: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white60 : Colors.black54),
+                      title: const Text('Notebooks', style: TextStyle(fontFamily: 'Google Sans Flex')),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotebooksListScreen()));
+                      },
+                    ),
                     SizedBox(height: size.height * 0.01),
                     _buildSidebarItem(
                         icon: Icons.chat_bubble_rounded,
                         title: 'Messages',
                         index: 2,
                         isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    _buildSidebarItem(
+                        icon: Icons.settings_outlined,
+                        title: 'Settings',
+                        index: 3,
+                        isDark: isDark),
+                    if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[
+                      SizedBox(height: size.height * 0.01),
+                      ListTile(
+                        leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54),
+                        title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen()));
+                        },
+                      ),
+                    ],
                     const Spacer(),
                     ListTile(
                       leading: const Icon(Icons.logout_rounded,
@@ -920,11 +946,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildGlassNavItem(0, Icons.home_rounded, 'Home', isDark),
                   _buildGlassNavItem(
-                      1, Icons.auto_awesome_rounded, 'Notebooks', isDark),
+                      1, Icons.assignment_rounded, 'Classwork', isDark),
                   _buildGlassNavItem(
                       2, Icons.chat_bubble_outline_rounded, 'Chat', isDark),
-                  _buildGlassNavItem(
-                      3, Icons.settings_outlined, 'Settings', isDark),
                 ],
               ),
             ),
@@ -944,7 +968,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _currentIndex = index);
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: smoothMotionNotifier.value ? const Duration(milliseconds: 160) : Duration.zero,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
               color: isSelected

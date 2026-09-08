@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'classroom_models.dart';
 import 'classroom_repository.dart';
+import 'classwork_session_screen.dart';
 
 class ClassroomScreen extends StatefulWidget {
   const ClassroomScreen({super.key});
@@ -423,7 +424,25 @@ class _AssignmentSheetState extends State<_AssignmentSheet> {
               const SizedBox(height: 10),
               Text(widget.assignment.description!, style: TextStyle(color: isDark ? Colors.white70 : Colors.black65, fontFamily: 'Google Sans Flex')),
             ],
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ClassworkSessionScreen(assignment: widget.assignment)));
+                },
+                icon: const Icon(Icons.screen_record_rounded),
+                label: const Text('Start monitored work', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: widget.accentBlue,
+                  side: BorderSide(color: widget.accentBlue.withOpacity(0.45)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             TextField(
               controller: _controller,
               minLines: 4,
