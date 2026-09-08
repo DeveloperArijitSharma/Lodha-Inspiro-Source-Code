@@ -1,0 +1,83 @@
+name: Batch 5 FlutLab build fixes
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Add Batch 5 FlutLab build compatibility fixes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Dart compile errors
+        shell: python
+        run: |
+          from pathlib import Path
+
+          # Fix Flutter icon/color constants that do not exist in the target SDK.
+          for filename in ['lib/classroom/classroom_screen.dart', 'lib/classroom/classwork_session_screen.dart']:
+              p = Path(filename)
+              text = p.read_text()
+              text = text.replace('Colors.black65', 'Colors.black54')
+              text = text.replace('Icons.screen_record_rounded', 'Icons.screen_share_rounded')
+              p.write_text(text)
+
+          # Restore the API names used by the existing Notebook screens while keeping
+          # the newer implementation as the single source of truth.
+          p = Path('lib/gemini/gemini_service.dart')
+          text = p.read_text()
+          marker = "  Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\\nCreate a concise spoken audio overview script.'}], systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.');"
+          replacement = marker + "\n\n  Future<String> generateAudioOverviewScript(List<NotebookSource> sources) => generateAudioOverview(sources);"
+          if 'generateAudioOverviewScript' not in text:
+              if marker not in text:
+                  raise SystemExit('audio overview marker not found')
+              text = text.replace(marker, replacement, 1)
+          p.write_text(text)
+
+          # The current GeminiService signature takes sources positionally.
+          p = Path('lib/notebooks/notebook_quiz_screen.dart')
+          text = p.read_text()
+          old = 'generateQuiz(sources: widget.sources, count: count)'
+          new = 'generateQuiz(widget.sources, count: count)'
+          if old not in text:
+              raise SystemExit('quiz call marker not found')
+          p.write_text(text.replace(old, new, 1))
+
+          # Reformat the chat composer expression so the Dart parser sees explicit
+          # widget boundaries instead of one very long nested constructor line.
+          p = Path('lib/chat_screen.dart')
+          text = p.read_text()
+          old = "                Expanded(child: Container(decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(24)), child: TextField(controller: _messageController, style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'), decoration: InputDecoration(hintText: 'Type a message...', hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)), onSubmitted: (_) => _sendMessage())),"
+          new = """                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),"""
+          if old not in text:
+              raise SystemExit('chat composer marker not found')
+          p.write_text(text.replace(old, new, 1))
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/chat_screen.dart lib/classroom/classroom_screen.dart lib/classroom/classwork_session_screen.dart lib/gemini/gemini_service.dart lib/notebooks/notebook_quiz_screen.dart
+          git commit -m "Fix Batch 5 FlutLab compile errors"
+          git push
