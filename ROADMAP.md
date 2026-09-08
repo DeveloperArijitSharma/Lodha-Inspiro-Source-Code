@@ -43,8 +43,8 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Reaction data foundation
 - [x] Reply/quote data foundation
 - [x] Edit/delete message state foundation
-- [ ] Message reactions UI
-- [ ] Reply/quote UI
+- [x] Message reactions UI
+- [x] Reply/quote UI
 - [ ] Typing indicators
 - [ ] Read/delivery states
 - [ ] Better group management
@@ -60,8 +60,8 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 ## 5. Notifications & Realtime
 
-- [ ] Realtime chat updates
-- [ ] New-message notifications
+- [x] Realtime chat updates
+- [x] New-message notifications
 - [ ] Assignment reminders
 - [ ] Announcement notifications
 - [ ] Call/incoming-event handling
@@ -98,6 +98,6 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 5. Backend security hardening
 6. UI polish, tests and release readiness
 
-Batch 2 currently contains the Classroom and Advanced Messaging foundations. The next step is to finish their Flutter UI and wire those screens into the existing app experience.
+Batch 1 is complete: messaging reactions, reply/quote UI, edit/delete actions, realtime message updates, and new-message notifications are now wired into the Flutter chat experience. Batch 2 continues with the next five agreed features.
 
 This roadmap is a living plan. Features can be changed, expanded or removed as the prototype grows.
