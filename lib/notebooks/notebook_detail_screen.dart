@@ -598,7 +598,9 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       contentCtrl.dispose();
       return;
     }
-    final title = titleCtrl.text.trim().isEmpty ? 'Untitled note' : titleCtrl.text.trim();
+    final title = titleCtrl.text.trim().isEmpty
+        ? 'Untitled note'
+        : titleCtrl.text.trim();
     final content = contentCtrl.text.trim();
     titleCtrl.dispose();
     contentCtrl.dispose();
@@ -616,7 +618,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
         final createdNote = await _repo.addNote(note);
         if (mounted) setState(() => _notes.insert(0, createdNote));
       } else {
-        final updated = await _repo.updateNote(existing.id, title: title, content: content);
+        final updated =
+            await _repo.updateNote(existing.id, title: title, content: content);
         if (mounted) {
           setState(() {
             _notes.removeWhere((n) => n.id == existing.id);
@@ -644,7 +647,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFEBF0F5),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFEBF0F5),
       appBar: AppBar(
         title: Text(widget.notebook.title,
             style: TextStyle(
@@ -918,8 +922,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
           Container(
             margin: const EdgeInsets.only(bottom: 4),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints:
-                BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.78),
             decoration: BoxDecoration(
               color: isUser
                   ? _accentBlue
@@ -1007,7 +1011,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                   ? Colors.black.withOpacity(0.4)
                   : Colors.white.withOpacity(0.7),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: isDark ? Colors.white12 : Colors.white70),
+              border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.white70),
             ),
             child: Row(
               children: [
@@ -1021,16 +1026,15 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                           ? 'Ask anything, with web access...'
                           : 'Ask about your sources...',
                       border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send_rounded, color: _accentBlue),
-                  onPressed:
-                      _sendingMessage ? null : () => _sendMessage(),
+                  onPressed: _sendingMessage ? null : () => _sendMessage(),
                 ),
               ],
             ),
@@ -1107,7 +1111,8 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                           context,
                           MaterialPageRoute(
                               builder: (_) => NotebookQuizScreen(
-                                  notebook: widget.notebook, sources: _sources)),
+                                  notebook: widget.notebook,
+                                  sources: _sources)),
                         ),
                 icon: const Icon(Icons.auto_awesome_rounded),
                 label: const Text('Open Quiz Generator'),
