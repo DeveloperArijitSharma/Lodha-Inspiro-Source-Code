@@ -1,13 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../gemini/gemini_service.dart';
-import '../widgets/voice_text_button.dart';
 import '../notebooks/notebook_models.dart';
+import '../widgets/voice_text_button.dart';
 
 class HomeAiScreen extends StatefulWidget {
   const HomeAiScreen({super.key});
-  @override
-  State<HomeAiScreen> createState() => _HomeAiScreenState();
+  @override State<HomeAiScreen> createState() => _HomeAiScreenState();
 }
 
 class _HomeAiScreenState extends State<HomeAiScreen> {
@@ -28,20 +27,27 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
     setState(() { _messages.add(_HomeMessage(true, prompt)); _loading = true; });
     _scrollDown();
     try {
-      final history = _messages.map((m) => ChatMessage(text: m.text, isUser: m.user)).toList();
+      final history = _messages.map((m) => ChatMessage(
+        id: '${m.user ? 'u' : 'a'}-${m.text.hashCode}-${m.text.length}',
+        isUser: m.user,
+        text: m.text,
+        createdAt: DateTime.now(),
+      )).toList();
       final answer = await _ai.askGeneral(prompt: prompt, history: history, webSearch: _webSearch);
-      if (!mounted) return;
-      setState(() { _messages.add(_HomeMessage(false, answer)); _loading = false; });
+      if (mounted) setState(() => _messages.add(_HomeMessage(false, answer)));
     } catch (e) {
-      if (!mounted) return;
-      setState(() { _messages.add(_HomeMessage(false, '$e')); _loading = false; });
+      if (mounted) setState(() => _messages.add(_HomeMessage(false, '$e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+      _scrollDown();
     }
-    _scrollDown();
   }
 
-  void _scrollDown() => WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
-  });
+  void _scrollDown() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +71,13 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Inspiro AI',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold,fontFamily:'Google Sans Flex',color:text)),Text('Your study chat',style:TextStyle(fontSize:13,color:dark?Colors.white60:Colors.black54,fontFamily:'Google Sans Flex'))])),
               Icon(Icons.circle,size:9,color:_loading?Colors.orangeAccent:Colors.greenAccent),const SizedBox(width:5),Text(_loading?'Thinking':'Ready',style:TextStyle(fontSize:12,color:text,fontFamily:'Google Sans Flex')),
             ])),
-            Expanded(child:_messages.isEmpty?_emptyState(text,dark):ListView.builder(controller:_scroll,padding:const EdgeInsets.fromLTRB(16,8,16,12),itemCount:_messages.length+(_loading?1:0),itemBuilder:(context,i){if(i>=_messages.length)return _bubble('Thinking…',false,dark,text,true);final m=_messages[i];return _bubble(m.text,m.user,dark,text,false); })),
+            Expanded(child:_messages.isEmpty ? _emptyState(text,dark) : ListView.builder(controller:_scroll,padding:const EdgeInsets.fromLTRB(16,8,16,12),itemCount:_messages.length+(_loading?1:0),itemBuilder:(context,i){if(i>=_messages.length)return _bubble('Thinking…',false,dark,text,true);final m=_messages[i];return _bubble(m.text,m.user,dark,text,false); })),
             Padding(padding:const EdgeInsets.fromLTRB(12,4,12,12),child:Column(children:[
               Row(children:[Icon(Icons.travel_explore_rounded,size:18,color:_webSearch?const Color(0xFF32C5FF):Colors.grey),const SizedBox(width:6),Text('Web search',style:TextStyle(fontSize:12,color:text,fontFamily:'Google Sans Flex')),const Spacer(),Switch(value:_webSearch,onChanged:_loading?null:(v)=>setState(()=>_webSearch=v))]),
-              ClipRRect(borderRadius:BorderRadius.circular(26),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:18,sigmaY:18),child:Container(decoration:BoxDecoration(color:dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.72),borderRadius:BorderRadius.circular(26),border:Border.all(color:Colors.white.withOpacity(.3))),child:Row(children:[Expanded(child:TextField(controller:_controller,minLines:1,maxLines:4,onSubmitted:(_)=>_ask(),style:TextStyle(color:text,fontFamily:'Google Sans Flex'),decoration:InputDecoration(hintText:'Message Inspiro AI…',hintStyle:TextStyle(color:dark?Colors.white54:Colors.black45),border:InputBorder.none,contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:13)))),VoiceTextButton(controller:_controller),IconButton(onPressed:_loading?null:_ask,icon:const Icon(Icons.arrow_upward_rounded,color:Color(0xFF32C5FF)))]))))
+              ClipRRect(borderRadius:BorderRadius.circular(26),child:BackdropFilter(filter:ImageFilter.blur(sigmaX:18,sigmaY:18),child:Container(decoration:BoxDecoration(color:dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.72),borderRadius:BorderRadius.circular(26),border:Border.all(color:Colors.white.withOpacity(.3))),child:Row(children:[
+                Expanded(child:TextField(controller:_controller,minLines:1,maxLines:4,onSubmitted:(_)=>_ask(),style:TextStyle(color:text,fontFamily:'Google Sans Flex'),decoration:InputDecoration(hintText:'Message Inspiro AI…',hintStyle:TextStyle(color:dark?Colors.white54:Colors.black45),border:InputBorder.none,contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:13))),
+                VoiceTextButton(controller:_controller),IconButton(onPressed:_loading?null:_ask,icon:const Icon(Icons.arrow_upward_rounded,color:Color(0xFF32C5FF))),
+              ]))))
             ])),
           ]),
         ),
@@ -76,13 +85,9 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
     );
   }
 
-  Widget _emptyState(Color text,bool dark)=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.auto_awesome_rounded,size:42,color:Color(0xFF32C5FF)),const SizedBox(height:12),Text('What can I help you study?',textAlign:TextAlign.center,style:TextStyle(fontSize:21,fontWeight:FontWeight.w700,color:text,fontFamily:'Google Sans Flex')),const SizedBox(height:8),Text('Ask anything, get explanations, or search the live web.',textAlign:TextAlign.center,style:TextStyle(color:dark?Colors.white60:Colors.black54,fontFamily:'Google Sans Flex')),const SizedBox(height:18),Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.center,children:['Explain photosynthesis','Make me a quick quiz','What happened today?'].map((q)=>ActionChip(label:Text(q),onPressed:()=>_ask(q))).toList())])));
+  Widget _emptyState(Color text,bool dark)=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.auto_awesome_rounded,size:42,color:Color(0xFF32C5FF)),const SizedBox(height:12),Text('What can I help you study?',textAlign:TextAlign.center,style:TextStyle(fontSize:21,fontWeight:FontWeight.w700,fontFamily:'Google Sans Flex')),const SizedBox(height:8),Text('Ask anything, get explanations, or search the live web.',textAlign:TextAlign.center,style:TextStyle(color:dark?Colors.white60:Colors.black54,fontFamily:'Google Sans Flex')),const SizedBox(height:18),Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.center,children:['Explain photosynthesis','Make me a quick quiz','What happened today?'].map((q)=>ActionChip(label:Text(q),onPressed:()=>_ask(q))).toList())])));
 
-  Widget _bubble(String value,bool user,bool dark,Color text,bool loading)=>Align(alignment:user?Alignment.centerRight:Alignment.centerLeft,child:Container(constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),decoration:BoxDecoration(gradient:user?const LinearGradient(colors:[Color(0xFF32C5FF),Color(0xFF5963FF)]):null,color:user?null:(dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.68)),borderRadius:BorderRadius.circular(21),border:Border.all(color:Colors.white.withOpacity(.2))),child:loading?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):Text(value,style:TextStyle(color:user?Colors.white:text,fontFamily:'Google Sans Flex',height:1.4))));
+  Widget _bubble(String value,bool user,bool dark,Color text,bool loading)=>Align(alignment:user?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),constraints:BoxConstraints(maxWidth:MediaQuery.of(context).size.width*.78),decoration:BoxDecoration(gradient:user?const LinearGradient(colors:[Color(0xFF32C5FF),Color(0xFF5963FF)]):null,color:user?null:(dark?Colors.white.withOpacity(.09):Colors.white.withOpacity(.68)),borderRadius:BorderRadius.circular(21),border:Border.all(color:Colors.white.withOpacity(.2))),child:loading?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):Text(value,style:TextStyle(color:user?Colors.white:text,fontFamily:'Google Sans Flex',height:1.4))));
 }
 
-class _HomeMessage {
-  final bool user;
-  final String text;
-  const _HomeMessage(this.user, this.text);
-}
+class _HomeMessage { final bool user; final String text; const _HomeMessage(this.user,this.text); }
