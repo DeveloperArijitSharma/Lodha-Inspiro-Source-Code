@@ -7,9 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.lodha_inspiro"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
 
-    // 🚀 HERE IS THE FIX: Explicitly forcing the newer NDK version for your packages
+    // Explicitly forcing the newer NDK version for your packages
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -29,7 +29,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.lodha_inspiro"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
