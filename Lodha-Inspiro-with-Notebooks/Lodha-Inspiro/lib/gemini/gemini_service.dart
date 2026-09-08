@@ -19,6 +19,7 @@ class GeminiService {
     String model = GeminiConfig.chatModel,
     double temperature = 0.4,
     int maxOutputTokens = 2048,
+    bool webSearch = false,
   }) async {
     if (GeminiConfig.apiKey.isEmpty || GeminiConfig.apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw GeminiException('No Gemini API key set. Open lib/gemini/gemini_config.dart and add your key from Google AI Studio (or pass it with --dart-define=GEMINI_API_KEY=...).');
@@ -34,6 +35,10 @@ class GeminiService {
       'contents': [
         {'role': 'user', 'parts': parts}
       ],
+      if (webSearch)
+        'tools': [
+          {'googleSearch': {}}
+        ],
       'generationConfig': {
         'temperature': temperature,
         'maxOutputTokens': maxOutputTokens,
@@ -91,8 +96,9 @@ class GeminiService {
         if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'},
         {'text': 'User request:\n$prompt'},
       ],
-      systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. Use plain text unless the user asks for a specific format. Do not use markdown headings or decorative asterisks at the beginning or end.',
+      systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. You may use current web information when the search tool is available. If you use web information, distinguish current facts from general knowledge. Do not use markdown headings or decorative asterisks at the beginning or end.',
       temperature: 0.6,
+      webSearch: true,
     );
   }
 
@@ -101,6 +107,19 @@ class GeminiService {
     return _generate(
       parts: [..._sourceParts(sources), {'text': '\n--- CONVERSATION SO FAR ---\n$transcript\n--- NEW QUESTION ---\nStudent: $question'}],
       systemInstruction: 'You are the AI notebook assistant inside Lodha Inspiro, a study app. Answer ONLY using the SOURCE material provided above. If the sources do not contain the answer, say so plainly instead of guessing. Use plain text only. Do not use Markdown headings, hash characters, asterisks, bullet markers, bold markers, code fences, or decorative symbols at the beginning or end. At the end, list source names in plain text like: Sources: "Source Title A", "Source Title B".',
+    );
+  }
+
+  Future<String> askNotebookGeneral({required String question, List<ChatMessage> history = const []}) async {
+    final transcript = history.map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}').join('\n');
+    return _generate(
+      parts: [
+        if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'},
+        {'text': 'Question:\n$question'},
+      ],
+      systemInstruction: 'You are Inspiro AI in the Notebook section of Lodha Inspiro. This is the separate Ask AI mode, so it does NOT require notebook sources. Answer the student directly using your knowledge and current web information when useful. Prefer reliable, current information for questions about recent events, people, products, science, technology, or other changing topics. If you browse, naturally mention that the answer uses current web information. Do not invent facts. Use plain text and keep answers easy for a student to understand.',
+      temperature: 0.6,
+      webSearch: true,
     );
   }
 
