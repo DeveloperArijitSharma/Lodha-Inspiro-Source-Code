@@ -35,18 +35,25 @@ class GeminiService {
       {'role': 'user', 'content': textParts},
     ];
 
+    final body = <String, dynamic>{
+      'model': model,
+      'messages': messages,
+      'max_tokens': maxOutputTokens,
+      'temperature': 0.35,
+    };
+    if (webSearch) {
+      body['tools'] = [
+        {'type': 'browser_search'},
+      ];
+    }
+
     final response = await http.post(
       Uri.parse(GroqConfig.endpoint),
       headers: {
         'Authorization': 'Bearer ${GroqConfig.apiKey}',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'model': model,
-        'messages': messages,
-        'max_tokens': maxOutputTokens,
-        'temperature': 0.35,
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
