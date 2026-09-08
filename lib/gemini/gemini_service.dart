@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import 'openrouter_config.dart';
+import 'groq_config.dart';
 import '../classwork_mode.dart';
 import '../notebooks/notebook_models.dart';
 import '../notebooks/notebook_quiz_models.dart';
@@ -13,15 +13,15 @@ class GeminiService {
   Future<String> _generate({
     required List<Map<String, dynamic>> parts,
     String? systemInstruction,
-    String model = OpenRouterConfig.model,
+    String model = GroqConfig.model,
     int maxOutputTokens = 2048,
     bool webSearch = false,
   }) async {
     if (classworkModeNotifier.value) {
       throw GeminiException('Inspiro AI is disabled while monitored classwork is in progress.');
     }
-    if (OpenRouterConfig.apiKey.isEmpty || OpenRouterConfig.apiKey == 'YOUR_OPENROUTER_API_KEY_HERE') {
-      throw GeminiException('No OpenRouter API key set. Run with --dart-define=OPENROUTER_API_KEY=...');
+    if (GroqConfig.apiKey.isEmpty || GroqConfig.apiKey == 'YOUR_GROQ_API_KEY_HERE') {
+      throw GeminiException('No Groq API key set. Run with --dart-define=GROQ_API_KEY=...');
     }
 
     final textParts = parts
@@ -36,31 +36,26 @@ class GeminiService {
     ];
 
     final response = await http.post(
-      Uri.parse(OpenRouterConfig.endpoint),
+      Uri.parse(GroqConfig.endpoint),
       headers: {
-        'Authorization': 'Bearer ${OpenRouterConfig.apiKey}',
+        'Authorization': 'Bearer ${GroqConfig.apiKey}',
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/DeveloperArijitSharma/Lodha-Inspiro-Source-Code',
-        'X-Title': OpenRouterConfig.appTitle,
       },
       body: jsonEncode({
         'model': model,
         'messages': messages,
         'max_tokens': maxOutputTokens,
         'temperature': 0.35,
-        if (webSearch) 'plugins': [
-          {'id': 'web'},
-        ],
       }),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw GeminiException('OpenRouter API error (${response.statusCode}): ${_extractError(response.body)}');
+      throw GeminiException('Groq API error (${response.statusCode}): ${_extractError(response.body)}');
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final choices = decoded['choices'] as List<dynamic>?;
-    if (choices == null || choices.isEmpty) throw GeminiException('OpenRouter returned no response.');
+    if (choices == null || choices.isEmpty) throw GeminiException('Groq returned no response.');
 
     final message = choices.first['message'] as Map<String, dynamic>?;
     final content = message?['content'];
@@ -144,16 +139,16 @@ class GeminiService {
       final cleaned = raw.replaceFirst(RegExp(r'^```(?:json)?\s*'), '').replaceFirst(RegExp(r'\s*```$'), '').trim();
       decoded = jsonDecode(cleaned);
     }
-    if (decoded is! List) throw GeminiException('OpenRouter returned an invalid quiz format.');
+    if (decoded is! List) throw GeminiException('Groq returned an invalid quiz format.');
 
     return decoded.map<NotebookQuizQuestion>((item) {
-      if (item is! Map) throw GeminiException('OpenRouter returned an invalid quiz question.');
+      if (item is! Map) throw GeminiException('Groq returned an invalid quiz question.');
       final map = Map<String, dynamic>.from(item);
       final rawOptions = map['options'];
-      if (rawOptions is! List || rawOptions.length != 4) throw GeminiException('OpenRouter returned a quiz question without exactly 4 options.');
+      if (rawOptions is! List || rawOptions.length != 4) throw GeminiException('Groq returned a quiz question without exactly 4 options.');
       final options = rawOptions.map<QuizOption>((option) => QuizOption(text: option.toString(), why: map['explanation']?.toString() ?? '')).toList();
       final answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
-      if (answer < 0 || answer > 3) throw GeminiException('OpenRouter returned an invalid correct answer index.');
+      if (answer < 0 || answer > 3) throw GeminiException('Groq returned an invalid correct answer index.');
       return NotebookQuizQuestion(
         question: map['question']?.toString() ?? '',
         options: options,
