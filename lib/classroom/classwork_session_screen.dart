@@ -96,11 +96,12 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
 
   Future<void> _stopSession() async {
     if (!_recording) return;
+    if (_answerController.text.trim().isEmpty) {
+      setState(() => _error = 'Please finish the written work before submitting.');
+      return;
+    }
     setState(() => _starting = true);
     try {
-      if (_answerController.text.trim().isEmpty) {
-        throw Exception('Please finish the written work before submitting.');
-      }
       final path = await FlutterScreenRecording.stopRecordScreen;
       final duration = _startedAt == null ? null : DateTime.now().difference(_startedAt!).inSeconds;
       await _uploadRecording(path, duration);
