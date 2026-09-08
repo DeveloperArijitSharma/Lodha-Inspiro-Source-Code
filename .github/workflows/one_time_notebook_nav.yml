@@ -1,0 +1,48 @@
+name: Restore Notebook bottom navigation
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Patch home navigation
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('lib/home_screen.dart')
+          s = p.read_text()
+
+          replacements = [
+            ("""            if (_currentIndex != 3)""", """            if (_currentIndex != 4)"""),
+            ("""      case 1:\n        return _buildClassworkScreenContent(size, padding, isDark);\n      case 2:\n        return _buildChatTabContent(size, padding, isDark);\n      case 3:\n        return _buildSettingsScreenContent(size, padding, isDark);""", """      case 1:\n        return _buildClassworkScreenContent(size, padding, isDark);\n      case 2:\n        return const NotebooksListScreen();\n      case 3:\n        return _buildChatTabContent(size, padding, isDark);\n      case 4:\n        return _buildSettingsScreenContent(size, padding, isDark);"""),
+            ("""                        title: 'Messages',\n                        index: 2,""", """                        title: 'Messages',\n                        index: 3,"""),
+            ("""                        title: 'Settings',\n                        index: 3,""", """                        title: 'Settings',\n                        index: 4,"""),
+            ("""                  _buildGlassNavItem(\n                      1, Icons.assignment_rounded, 'Classwork', isDark),\n                  _buildGlassNavItem(\n                      2, Icons.chat_bubble_outline_rounded, 'Chat', isDark),""", """                  _buildGlassNavItem(\n                      1, Icons.assignment_rounded, 'Classwork', isDark),\n                  _buildGlassNavItem(\n                      2, Icons.auto_awesome_rounded, 'Notebook', isDark),\n                  _buildGlassNavItem(\n                      3, Icons.chat_bubble_outline_rounded, 'Chat', isDark),"""),
+          ]
+
+          for old, new in replacements:
+            if old not in s:
+              raise SystemExit(f'Missing expected source pattern: {old[:80]}')
+            s = s.replace(old, new, 1)
+
+          p.write_text(s)
+
+      - name: Commit navigation patch and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/home_screen.dart .github/workflows/one_time_notebook_nav.yml
+          git rm .github/workflows/one_time_notebook_nav.yml
+          git commit -m "Restore Notebook in bottom navigation"
+          git push
