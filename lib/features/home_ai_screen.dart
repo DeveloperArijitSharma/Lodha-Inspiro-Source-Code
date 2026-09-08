@@ -21,7 +21,7 @@ class _HomeAiScreenState extends State<HomeAiScreen> {
     if (prompt.isEmpty || _loading) return;
     setState(() => _loading = true);
     try {
-      final answer = await _ai.askGeneral(prompt: prompt, webSearch: _webSearch);
+      final answer = await _ai.askGeneral(prompt: prompt);
       if (mounted) setState(() => _answer = answer);
     } catch (e) {
       if (mounted) setState(() => _answer = e.toString());
