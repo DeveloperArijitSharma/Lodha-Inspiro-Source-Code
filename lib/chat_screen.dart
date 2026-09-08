@@ -9,6 +9,8 @@ import 'messaging/message_actions_sheet.dart';
 import 'messaging/message_models.dart';
 import 'messaging/message_repository.dart';
 import 'notification_service.dart';
+import 'features/chat_attachment_service.dart';
+import 'widgets/voice_text_button.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -24,6 +26,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final supabase = Supabase.instance.client;
   final MessageRepository _repository = MessageRepository();
+  final ChatAttachmentService _attachmentService = ChatAttachmentService();
   final TextEditingController _messageController = TextEditingController();
   final Color _accentBlue = const Color(0xFF32C5FF);
 
@@ -117,10 +120,13 @@ class _ChatScreenState extends State<ChatScreen> {
       final image = await ImagePicker().pickImage(source: ImageSource.gallery);
       if (image == null) return;
       setState(() => _isUploading = true);
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
       final bytes = await image.readAsBytes();
-      await supabase.storage.from('chat_attachments').uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
-      final imageUrl = supabase.storage.from('chat_attachments').getPublicUrl(fileName);
+      final path = await _attachmentService.uploadImage(
+        fileName: image.name,
+        bytes: bytes,
+        contentType: 'image/${image.name.split('.').last.toLowerCase()}',
+      );
+      final imageUrl = supabase.storage.from('chat_attachments').getPublicUrl(path);
       if (mounted) setState(() => _isUploading = false);
       await _sendMessage(attachmentUrl: imageUrl);
     } catch (_) {
@@ -248,27 +254,28 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.only(left: 8, right: 16, top: 12, bottom: MediaQuery.of(context).padding.bottom + 12),
               decoration: BoxDecoration(color: isDark ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.7), border: Border(top: BorderSide(color: isDark ? Colors.white12 : Colors.black12))),
               child: Row(children: [
-                IconButton(icon: const Icon(Icons.add_circle_outline_rounded), color: isDark ? Colors.white70 : Colors.black54, iconSize: 28, onPressed: _isUploading ? null : _pickAndUploadAttachment),
+                IconButton(icon: const Icon(Icons.add_circle_outline_rounded), color: isDark ? Colors.white70 : Colors.black54, iconSize: 28, onPressed: _isUploading ? null : _pickAndUploadAttachment, tooltip: 'Attach image'),
                 Expanded(
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: TextField(
-            controller: _messageController,
-            style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'),
-            decoration: InputDecoration(
-              hintText: 'Type a message...',
-              hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            onSubmitted: (_) => _sendMessage(),
-          ),
-        ),
-      ),
-                const SizedBox(width: 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                VoiceTextButton(controller: _messageController, color: _accentBlue, tooltip: 'Speak message'),
+                const SizedBox(width: 4),
                 GestureDetector(onTap: () => _sendMessage(), child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _accentBlue, shape: BoxShape.circle), child: const Icon(Icons.send_rounded, color: Colors.white, size: 20))),
               ]),
             ),
