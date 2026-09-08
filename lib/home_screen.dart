@@ -6,6 +6,8 @@ import 'chat_screen.dart';
 import 'login_screen.dart';
 import 'main.dart';
 import 'notebooks/notebooks_list_screen.dart';
+import 'app_preferences.dart';
+import 'widgets/advanced_settings_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 🚀 DELETE CHAT PERMANENTLY
   Future<void> _deleteChat(String chatId, String chatName) async {
-    HapticFeedback.heavyImpact();
+    if (hapticsNotifier.value) HapticFeedback.heavyImpact();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -133,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _signOut() async {
-    HapticFeedback.mediumImpact();
+    if (hapticsNotifier.value) HapticFeedback.mediumImpact();
     await supabase.auth.signOut();
     if (mounted)
       Navigator.pushReplacement(
@@ -166,7 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Positioned.fill(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+                duration: smoothMotionNotifier.value
+                    ? const Duration(milliseconds: 180)
+                    : Duration.zero,
                 child: _buildCurrentView(size, padding, isDark,
                     key: ValueKey<int>(_currentIndex)),
               ),
@@ -414,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
           bottom: size.height * 0.22,
           child: GestureDetector(
             onTap: () {
-              HapticFeedback.lightImpact();
+              if (hapticsNotifier.value) HapticFeedback.lightImpact();
               _showAddChatDialog(isDark, _accentBlue);
             },
             child: ClipRRect(
@@ -482,11 +486,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          if (hapticsNotifier.value) HapticFeedback.selectionClick();
           setState(() => _selectedChatTab = index);
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: smoothMotionNotifier.value
+              ? const Duration(milliseconds: 160)
+              : Duration.zero,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
@@ -669,13 +675,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: !isDark,
                   activeColor: _accentBlue,
                   onChanged: (value) {
-                    HapticFeedback.selectionClick();
+                    if (hapticsNotifier.value) HapticFeedback.selectionClick();
                     themeNotifier.value =
                         value ? ThemeMode.light : ThemeMode.dark;
                   },
                 ),
               ],
             ),
+          ),
+          SizedBox(height: size.height * 0.025),
+          AdvancedSettingsSection(
+            isDark: isDark,
+            accentColor: _accentBlue,
           ),
           SizedBox(height: size.height * 0.025),
           SizedBox(
@@ -929,7 +940,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.lightImpact();
+          if (hapticsNotifier.value) HapticFeedback.lightImpact();
           setState(() => _currentIndex = index);
         },
         child: AnimatedContainer(
@@ -1081,7 +1092,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.person_outline_rounded,
               isDark: isDark),
           onAction: () async {
-            HapticFeedback.mediumImpact();
+            if (hapticsNotifier.value) HapticFeedback.mediumImpact();
             Navigator.pop(context);
             await _updateUserName(nameController.text);
           },
