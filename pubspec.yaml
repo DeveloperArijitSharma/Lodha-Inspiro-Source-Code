@@ -16,7 +16,7 @@ dependencies:
 
   permission_handler: ^11.3.0
   image_picker: ^1.0.7
-  camera: ^0.12.1
+  camera: ^0.11.2+1
   flutter_screen_recording: ^2.0.25
 
   # Notebooks (Gemini-powered NotebookLM-style feature)
