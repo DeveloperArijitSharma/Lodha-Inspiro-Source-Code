@@ -177,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: ValueKey<int>(_currentIndex)),
               ),
             ),
-            if (_currentIndex != 3)
+            if (_currentIndex != 4)
               Positioned(
                 left: size.width * 0.04,
                 right: size.width * 0.04,
@@ -198,8 +198,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return _buildClassworkScreenContent(size, padding, isDark);
       case 2:
-        return _buildChatTabContent(size, padding, isDark);
+        return const NotebooksListScreen();
       case 3:
+        return _buildChatTabContent(size, padding, isDark);
+      case 4:
         return _buildSettingsScreenContent(size, padding, isDark);
       default:
         return _buildHomeScreenContent(size, padding, isDark);
@@ -803,13 +805,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildSidebarItem(
                         icon: Icons.chat_bubble_rounded,
                         title: 'Messages',
-                        index: 2,
+                        index: 3,
                         isDark: isDark),
                     SizedBox(height: size.height * 0.01),
                     _buildSidebarItem(
                         icon: Icons.settings_outlined,
                         title: 'Settings',
-                        index: 3,
+                        index: 4,
                         isDark: isDark),
                     if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[
                       SizedBox(height: size.height * 0.01),
@@ -948,7 +950,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildGlassNavItem(
                       1, Icons.assignment_rounded, 'Classwork', isDark),
                   _buildGlassNavItem(
-                      2, Icons.chat_bubble_outline_rounded, 'Chat', isDark),
+                      2, Icons.auto_awesome_rounded, 'Notebook', isDark),
+                  _buildGlassNavItem(
+                      3, Icons.chat_bubble_outline_rounded, 'Chat', isDark),
                 ],
               ),
             ),
