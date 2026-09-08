@@ -257,7 +257,7 @@ class _NotebooksListScreenState extends State<NotebooksListScreen> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(notebook.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w750, fontFamily: 'Google Sans Flex')),
+                        Text(notebook.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'Google Sans Flex')),
                         const SizedBox(height: 5),
                         Text(hasSummary ? notebook.summary! : 'Ready for notes, PDFs and questions.', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF718096), fontSize: 13, height: 1.35, fontFamily: 'Google Sans Flex')),
                       ]),
