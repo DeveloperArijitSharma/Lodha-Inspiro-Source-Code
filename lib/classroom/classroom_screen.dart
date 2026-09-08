@@ -422,7 +422,7 @@ class _AssignmentSheetState extends State<_AssignmentSheet> {
             Text(widget.assignment.title, style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
             if (widget.assignment.description != null) ...[
               const SizedBox(height: 10),
-              Text(widget.assignment.description!, style: TextStyle(color: isDark ? Colors.white70 : Colors.black65, fontFamily: 'Google Sans Flex')),
+              Text(widget.assignment.description!, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontFamily: 'Google Sans Flex')),
             ],
             const SizedBox(height: 14),
             SizedBox(
@@ -432,7 +432,7 @@ class _AssignmentSheetState extends State<_AssignmentSheet> {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => ClassworkSessionScreen(assignment: widget.assignment)));
                 },
-                icon: const Icon(Icons.screen_record_rounded),
+                icon: const Icon(Icons.screen_share_rounded),
                 label: const Text('Start monitored work', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: widget.accentBlue,

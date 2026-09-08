@@ -226,7 +226,7 @@ class _ClassworkSessionScreenState extends State<ClassworkSessionScreen> {
               height: 56,
               child: ElevatedButton.icon(
                 onPressed: _starting || !_cameraReady ? null : (_recording ? _stopSession : _startSession),
-                icon: Icon(_recording ? Icons.stop_rounded : Icons.screen_record_rounded),
+                icon: Icon(_recording ? Icons.stop_rounded : Icons.screen_share_rounded),
                 label: Text(_starting ? 'Please wait…' : (_recording ? 'Finish & submit recording' : 'Start monitored work')),
                 style: ElevatedButton.styleFrom(backgroundColor: _recording ? Colors.redAccent : _accent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
               ),

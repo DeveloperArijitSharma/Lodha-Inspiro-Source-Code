@@ -48,7 +48,7 @@ class _NotebookQuizScreenState extends State<NotebookQuizScreen> {
       _score = 0;
     });
     try {
-      final questions = await _gemini.generateQuiz(sources: widget.sources, count: count);
+      final questions = await _gemini.generateQuiz(widget.sources, count: count);
       if (!mounted) return;
       setState(() {
         _questions = questions;

@@ -91,6 +91,8 @@ class GeminiService {
   }
 
   Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nCreate a concise spoken audio overview script.'}], systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.');
+
+  Future<String> generateAudioOverviewScript(List<NotebookSource> sources) => generateAudioOverview(sources);
 }
 
 class GeminiException implements Exception {

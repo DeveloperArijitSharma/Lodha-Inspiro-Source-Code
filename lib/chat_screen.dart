@@ -249,7 +249,25 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(color: isDark ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.7), border: Border(top: BorderSide(color: isDark ? Colors.white12 : Colors.black12))),
               child: Row(children: [
                 IconButton(icon: const Icon(Icons.add_circle_outline_rounded), color: isDark ? Colors.white70 : Colors.black54, iconSize: 28, onPressed: _isUploading ? null : _pickAndUploadAttachment),
-                Expanded(child: Container(decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(24)), child: TextField(controller: _messageController, style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'), decoration: InputDecoration(hintText: 'Type a message...', hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)), onSubmitted: (_) => _sendMessage())),
+                Expanded(
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: TextField(
+            controller: _messageController,
+            style: TextStyle(color: textColor, fontFamily: 'Google Sans Flex'),
+            decoration: InputDecoration(
+              hintText: 'Type a message...',
+              hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onSubmitted: (_) => _sendMessage(),
+          ),
+        ),
+      ),
                 const SizedBox(width: 12),
                 GestureDetector(onTap: () => _sendMessage(), child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _accentBlue, shape: BoxShape.circle), child: const Icon(Icons.send_rounded, color: Colors.white, size: 20))),
               ]),
