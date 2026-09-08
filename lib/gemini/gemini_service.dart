@@ -84,10 +84,50 @@ class GeminiService {
     return raw.split('\n').map((l) => l.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), '')).where((l) => l.isNotEmpty).take(4).toList();
   }
 
-  Future<List<Map<String, dynamic>>> generateQuiz(List<NotebookSource> sources, {int count = 8}) async {
-    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nCreate $count multiple-choice questions as JSON.'}], systemInstruction: 'Return only a JSON array of objects with question, options (array of 4 strings), and answer (0-3).');
-    final decoded = jsonDecode(raw);
-    return List<Map<String, dynamic>>.from(decoded);
+  Future<List<NotebookQuizQuestion>> generateQuiz(List<NotebookSource> sources, {int count = 8}) async {
+    final raw = await _generate(
+      parts: [..._sourceParts(sources), {'text': '\nCreate $count multiple-choice questions as JSON. Each object must contain question, options (exactly 4 strings), answer (0-3), hint, and explanation.'}],
+      systemInstruction: 'Return ONLY a JSON array of objects with question, options (array of exactly 4 strings), answer (0-3), hint, and explanation. Use only the provided source material. Keep hints and explanations concise.',
+    );
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      final cleaned = raw.replaceFirst(RegExp(r'^```(?:json)?\s*'), '').replaceFirst(RegExp(r'\s*```$'), '').trim();
+      decoded = jsonDecode(cleaned);
+    }
+
+    if (decoded is! List) {
+      throw GeminiException('Gemini returned an invalid quiz format.');
+    }
+
+    return decoded.map<NotebookQuizQuestion>((item) {
+      if (item is! Map) throw GeminiException('Gemini returned an invalid quiz question.');
+      final map = Map<String, dynamic>.from(item);
+      final rawOptions = map['options'];
+      if (rawOptions is! List || rawOptions.length != 4) {
+        throw GeminiException('Gemini returned a quiz question without exactly 4 options.');
+      }
+      final options = rawOptions.map<QuizOption>((option) {
+        if (option is Map) {
+          final optionMap = Map<String, dynamic>.from(option);
+          return QuizOption(
+            text: optionMap['text']?.toString() ?? '',
+            why: optionMap['why']?.toString() ?? optionMap['explanation']?.toString() ?? '',
+          );
+        }
+        return QuizOption(text: option.toString(), why: '');
+      }).toList();
+      final answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
+      if (answer < 0 || answer > 3) throw GeminiException('Gemini returned an invalid correct answer index.');
+      return NotebookQuizQuestion(
+        question: map['question']?.toString() ?? '',
+        options: options,
+        correctIndex: answer,
+        hint: map['hint']?.toString() ?? '',
+      );
+    }).toList();
   }
 
   Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nCreate a concise spoken audio overview script.'}], systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.');
