@@ -12,6 +12,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Audio Overview script + device narration
 - [x] Create, edit and delete notes
 - [x] Save useful AI answers as notes
+- [x] Download notes as PDF, Word, PowerPoint or PNG on Android
 - [ ] Click a citation to jump to the exact source passage
 - [ ] Better source previews and source management
 - [ ] Streaming AI responses
@@ -71,6 +72,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 - [x] Supabase authentication foundation
 - [x] Row-level security for notebook data
+- [x] Hardened database function search paths
 - [ ] Move Gemini requests behind a Supabase Edge Function
 - [ ] Keep API secrets out of the Flutter client
 - [ ] Move large source files to Supabase Storage
@@ -82,11 +84,14 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Light/dark mode foundation
 - [x] Google Sans Flex typography
 - [x] Liquid-glass visual direction
-- [ ] Consistent design system and reusable components
+- [x] Reusable Liquid Glass card, button and backdrop components
+- [x] Shared Inspiro spacing, radius, typography and motion tokens
+- [x] Shared accessibility helpers for interactive/section semantics
+- [x] Automated Flutter analysis/tests in GitHub Actions
+- [ ] Consistent design-system adoption across existing screens
 - [ ] Loading, empty and error states across the app
-- [ ] Accessibility pass
-- [ ] Automated Flutter analysis/tests
-- [ ] CI build checks
+- [ ] Full accessibility pass
+- [ ] CI Android build checks
 - [ ] Clean release configuration
 
 ## Current Build Order
@@ -98,6 +103,10 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 5. Backend security hardening
 6. UI polish, tests and release readiness
 
-Batch 1 is complete: messaging reactions, reply/quote UI, edit/delete actions, realtime message updates, and new-message notifications are now wired into the Flutter chat experience. Batch 2 continues with the next five agreed features.
+Batch 1 is complete: messaging reactions, reply/quote UI, edit/delete actions, realtime message updates, and new-message notifications are now wired into the Flutter chat experience.
+
+Batch 2 added Android note downloads plus reusable Liquid Glass building blocks for the next Studio UI pass.
+
+Batch 3 adds the shared design/accessibility foundation and GitHub Flutter CI checks needed to make the UI work consistent as more screens are upgraded.
 
 This roadmap is a living plan. Features can be changed, expanded or removed as the prototype grows.
