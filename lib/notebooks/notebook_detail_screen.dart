@@ -909,39 +909,41 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 
   Widget _buildChatEmptyState(bool isDark, Color textColor) {
+    final topic = widget.notebook.title.trim().isEmpty ? 'this topic' : widget.notebook.title.trim();
+    final topicQuestions = <String>[
+      'What are the key ideas in $topic?',
+      'Explain $topic in simple student-friendly words.',
+      'What are the most important facts about $topic?',
+      'Give me a quick quiz question about $topic.',
+    ];
+    final questions = _generalAskMode ? topicQuestions : _suggestedQuestions;
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const SizedBox(height: 40),
-        Icon(Icons.chat_bubble_outline_rounded,
-            size: 48, color: _accentBlue.withOpacity(0.6)),
-        const SizedBox(height: 16),
+        const SizedBox(height: 28),
+        Icon(_generalAskMode ? Icons.travel_explore_rounded : Icons.chat_bubble_outline_rounded,
+            size: 48, color: _accentBlue.withOpacity(0.72)),
+        const SizedBox(height: 14),
         Text(
           _generalAskMode
-              ? 'Ask Gemini anything. This mode is separate from your notebook sources and can browse the web.'
+              ? 'Ask AI + Web about $topic. Try one of these questions:'
               : (_sources.isEmpty
                   ? 'Add a source first, then ask anything about it.'
                   : 'Ask anything grounded in your sources.'),
           textAlign: TextAlign.center,
-          style: TextStyle(
-              color: isDark ? Colors.white60 : Colors.black54,
-              fontFamily: 'Google Sans Flex'),
+          style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontFamily: 'Google Sans Flex', height: 1.4),
         ),
-        if (!_generalAskMode && _suggestedQuestions.isNotEmpty) ...[
+        if (questions.isNotEmpty) ...[
           const SizedBox(height: 20),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
             runSpacing: 8,
-            children: _suggestedQuestions
-                .map((q) => ActionChip(
-                      label: Text(q,
-                          style:
-                              const TextStyle(fontFamily: 'Google Sans Flex')),
-                      backgroundColor: _accentBlue.withOpacity(0.12),
-                      onPressed: () => _sendMessage(q),
-                    ))
-                .toList(),
+            children: questions.take(4).map((q) => ActionChip(
+              label: Text(q, style: const TextStyle(fontFamily: 'Google Sans Flex')),
+              backgroundColor: _accentBlue.withOpacity(0.12),
+              onPressed: () => _sendMessage(q),
+            )).toList(),
           ),
         ],
       ],
@@ -1090,7 +1092,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
           isDark: isDark,
           textColor: textColor,
           icon: Icons.auto_awesome_rounded,
-          title: 'AI Classwork',
+          title: 'AI Classwork Studio',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1100,7 +1102,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                 onPressed: _generateAiClasswork,
                 style: ElevatedButton.styleFrom(backgroundColor: _accentBlue, foregroundColor: Colors.white),
                 icon: const Icon(Icons.auto_awesome_rounded),
-                label: const Text('Create classwork'),
+                label: const Text('Create AI classwork from this notebook'),
               ),
             ],
           ),
