@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatAttachmentService {
@@ -21,7 +22,7 @@ class ChatAttachmentService {
 
     await client.storage.from('chat_attachments').uploadBinary(
       path,
-      bytes,
+      Uint8List.fromList(bytes),
       fileOptions: FileOptions(upsert: false, contentType: contentType),
     );
     return path;
