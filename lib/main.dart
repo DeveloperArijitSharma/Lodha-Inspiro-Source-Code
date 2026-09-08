@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'app_preferences.dart';
 import 'app_update_service.dart';
 import 'notification_service.dart';
 import 'login_screen.dart';
+import 'settings_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -13,6 +15,12 @@ void main() async {
     url: 'https://orsarmmwvjkltpditpnt.supabase.co',
     anonKey: 'sb_publishable_5ODxWB_3VB_JUJDdLyfjuQ_fG4aUlUi',
   );
+
+  final preferences = await InspiroSettingsService.load();
+  themeNotifier.value = (preferences['darkMode'] ?? false)
+      ? ThemeMode.dark
+      : ThemeMode.light;
+  await loadAppPreferences();
 
   runApp(const MyApp());
 }
@@ -28,15 +36,33 @@ class _MyAppState extends State<MyApp> {
   bool _updateChecked = false;
 
   @override
+  void initState() {
+    super.initState();
+    themeNotifier.addListener(_persistTheme);
+  }
+
+  @override
+  void dispose() {
+    themeNotifier.removeListener(_persistTheme);
+    super.dispose();
+  }
+
+  Future<void> _persistTheme() async {
+    await InspiroSettingsService.saveTheme(themeNotifier.value == ThemeMode.dark);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_updateChecked) return;
     _updateChecked = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await NotificationService.requestPermission();
+      if (notificationsNotifier.value) {
+        await NotificationService.requestPermission();
+      }
       if (!mounted) return;
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
       await AppUpdateService().checkAndPrompt(context);
     });
@@ -47,14 +73,20 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, child) {
+        final motionDuration = smoothMotionNotifier.value
+            ? const Duration(milliseconds: 180)
+            : Duration.zero;
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Lodha Inspiro',
           themeMode: currentMode,
+          themeAnimationDuration: motionDuration,
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFEBF0F5),
             fontFamily: 'Google Sans Flex',
+            splashFactory: InkSparkle.splashFactory,
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -64,6 +96,7 @@ class _MyAppState extends State<MyApp> {
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF121212),
             fontFamily: 'Google Sans Flex',
+            splashFactory: InkSparkle.splashFactory,
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.transparent,
               elevation: 0,
