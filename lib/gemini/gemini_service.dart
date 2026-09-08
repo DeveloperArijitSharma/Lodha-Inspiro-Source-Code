@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'gemini_config.dart';
+import '../classwork_mode.dart';
 import '../notebooks/notebook_models.dart';
 import '../notebooks/notebook_quiz_models.dart';
 
@@ -13,6 +14,9 @@ class GeminiService {
   Uri _endpoint(String model) => Uri.parse('$_base/models/$model:generateContent?key=${GeminiConfig.apiKey}');
 
   Future<String> _generate({required List<Map<String, dynamic>> parts, String? systemInstruction, String model = GeminiConfig.chatModel, int maxOutputTokens = 2048, bool webSearch = false}) async {
+    if (classworkModeNotifier.value) {
+      throw GeminiException('Inspiro AI is disabled while monitored classwork is in progress.');
+    }
     if (GeminiConfig.apiKey.isEmpty || GeminiConfig.apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
       throw GeminiException('No Gemini API key set. Add your key in gemini_config.dart or pass it with --dart-define=GEMINI_API_KEY=...');
     }
@@ -80,25 +84,13 @@ class GeminiService {
     return raw.split('\n').map((l) => l.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), '')).where((l) => l.isNotEmpty).take(4).toList();
   }
 
-  Future<List<NotebookQuizQuestion>> generateQuiz({required List<NotebookSource> sources, required int count}) async {
-    if (count < 1 || count >= 50) throw GeminiException('Choose between 1 and 49 questions.');
-    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nCreate exactly $count multiple-choice questions from the sources. Return ONLY valid JSON with {"questions":[{"question":"...","options":[{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."},{"text":"...","why":"..."}],"correctIndex":0,"hint":"..."}]}. Keep everything grounded in the sources.'}], systemInstruction: 'Generate objective source-grounded MCQs. Never invent facts. Each question must have exactly four options and one correct option.', maxOutputTokens: 12000);
-    var cleaned = raw.trim();
-    if (cleaned.startsWith('```')) { cleaned = cleaned.replaceFirst(RegExp(r'^```(?:json)?\s*'), ''); cleaned = cleaned.replaceFirst(RegExp(r'\s*```\s*$'), ''); }
-    try {
-      final decoded = jsonDecode(cleaned) as Map<String, dynamic>;
-      final items = decoded['questions'] as List<dynamic>? ?? const [];
-      final questions = items.map((item) {
-        final map = Map<String, dynamic>.from(item as Map);
-        final options = (map['options'] as List<dynamic>? ?? const []).map((option) => Map<String, dynamic>.from(option as Map)).map((option) => QuizOption(text: option['text']?.toString().trim() ?? '', why: option['why']?.toString().trim() ?? '')).toList();
-        return NotebookQuizQuestion(question: map['question']?.toString().trim() ?? '', options: options, correctIndex: (map['correctIndex'] as num?)?.toInt() ?? -1, hint: map['hint']?.toString().trim() ?? '');
-      }).where((q) => q.question.isNotEmpty && q.options.length == 4 && q.correctIndex >= 0 && q.correctIndex < 4 && q.hint.isNotEmpty && q.options.every((o) => o.text.isNotEmpty && o.why.isNotEmpty)).take(count).toList();
-      if (questions.length != count) throw const FormatException('Incomplete quiz response');
-      return questions;
-    } catch (_) { throw GeminiException('Gemini returned an invalid quiz. Please try again.'); }
+  Future<List<Map<String, dynamic>>> generateQuiz(List<NotebookSource> sources, {int count = 8}) async {
+    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nCreate $count multiple-choice questions as JSON.'}], systemInstruction: 'Return only a JSON array of objects with question, options (array of 4 strings), and answer (0-3).');
+    final decoded = jsonDecode(raw);
+    return List<Map<String, dynamic>>.from(decoded);
   }
 
-  Future<String> generateAudioOverviewScript(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nWrite a friendly 90-second two-host podcast script. Alternate Host A: and Host B: lines. Ground it only in the sources.'}], systemInstruction: 'Write natural, engaging study dialogue grounded only in the provided sources.');
+  Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nCreate a concise spoken audio overview script.'}], systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.');
 }
 
 class GeminiException implements Exception {
