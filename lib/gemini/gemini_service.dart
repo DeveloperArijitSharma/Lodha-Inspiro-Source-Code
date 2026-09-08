@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import 'gemini_config.dart';
+import 'openrouter_config.dart';
 import '../classwork_mode.dart';
 import '../notebooks/notebook_models.dart';
 import '../notebooks/notebook_quiz_models.dart';
@@ -9,54 +9,85 @@ import '../notebooks/notebook_quiz_models.dart';
 class GeminiService {
   GeminiService._();
   static final GeminiService instance = GeminiService._();
-  static const _base = 'https://generativelanguage.googleapis.com/v1beta';
 
-  Uri _endpoint(String model) => Uri.parse('$_base/models/$model:generateContent?key=${GeminiConfig.apiKey}');
-
-  Future<String> _generate({required List<Map<String, dynamic>> parts, String? systemInstruction, String model = GeminiConfig.chatModel, int maxOutputTokens = 2048, bool webSearch = false}) async {
+  Future<String> _generate({
+    required List<Map<String, dynamic>> parts,
+    String? systemInstruction,
+    String model = OpenRouterConfig.model,
+    int maxOutputTokens = 2048,
+    bool webSearch = false,
+  }) async {
     if (classworkModeNotifier.value) {
       throw GeminiException('Inspiro AI is disabled while monitored classwork is in progress.');
     }
-    if (GeminiConfig.apiKey.isEmpty || GeminiConfig.apiKey == 'YOUR_GEMINI_API_KEY_HERE') {
-      throw GeminiException('No Gemini API key set. Add your key in gemini_config.dart or pass it with --dart-define=GEMINI_API_KEY=...');
+    if (OpenRouterConfig.apiKey.isEmpty || OpenRouterConfig.apiKey == 'YOUR_OPENROUTER_API_KEY_HERE') {
+      throw GeminiException('No OpenRouter API key set. Run with --dart-define=OPENROUTER_API_KEY=...');
     }
-    final body = {
-      if (systemInstruction != null) 'systemInstruction': {'parts': [{'text': systemInstruction}]},
-      'contents': [{'role': 'user', 'parts': parts}],
-      if (webSearch) 'tools': [{'googleSearch': {}}],
-      'generationConfig': {
-        'maxOutputTokens': maxOutputTokens,
-        'thinkingConfig': {'thinkingLevel': 'minimal'},
+
+    final textParts = parts
+        .map((part) => part['text']?.toString())
+        .whereType<String>()
+        .where((text) => text.isNotEmpty)
+        .join('\n');
+
+    final messages = <Map<String, dynamic>>[
+      if (systemInstruction != null) {'role': 'system', 'content': systemInstruction},
+      {'role': 'user', 'content': textParts},
+    ];
+
+    final response = await http.post(
+      Uri.parse(OpenRouterConfig.endpoint),
+      headers: {
+        'Authorization': 'Bearer ${OpenRouterConfig.apiKey}',
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/DeveloperArijitSharma/Lodha-Inspiro-Source-Code',
+        'X-Title': OpenRouterConfig.appTitle,
       },
-    };
-    final response = await http.post(_endpoint(model), headers: {'Content-Type': 'application/json'}, body: jsonEncode(body));
-    if (response.statusCode != 200) throw GeminiException('Gemini API error (${response.statusCode}): ${_extractError(response.body)}');
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final candidates = decoded['candidates'] as List<dynamic>?;
-    if (candidates == null || candidates.isEmpty) {
-      final blockReason = decoded['promptFeedback']?['blockReason'];
-      throw GeminiException(blockReason != null ? 'Gemini blocked this request: $blockReason' : 'Gemini returned no response.');
+      body: jsonEncode({
+        'model': model,
+        'messages': messages,
+        'max_tokens': maxOutputTokens,
+        'temperature': 0.35,
+        if (webSearch) 'plugins': [
+          {'id': 'web'},
+        ],
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw GeminiException('OpenRouter API error (${response.statusCode}): ${_extractError(response.body)}');
     }
-    final contentParts = candidates.first['content']?['parts'] as List<dynamic>?;
-    if (contentParts == null || contentParts.isEmpty) return '';
-    return contentParts.map((p) => p['text'] ?? '').join();
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final choices = decoded['choices'] as List<dynamic>?;
+    if (choices == null || choices.isEmpty) throw GeminiException('OpenRouter returned no response.');
+
+    final message = choices.first['message'] as Map<String, dynamic>?;
+    final content = message?['content'];
+    if (content is String) return content;
+    if (content is List) {
+      return content.whereType<Map>().map((part) => part['text']?.toString() ?? '').join();
+    }
+    return content?.toString() ?? '';
   }
 
   String _extractError(String body) {
     try {
       final decoded = jsonDecode(body);
       return decoded['error']?['message']?.toString() ?? body;
-    } catch (_) { return body; }
+    } catch (_) {
+      return body;
+    }
   }
 
   List<Map<String, dynamic>> _sourceParts(List<NotebookSource> sources) {
     final parts = <Map<String, dynamic>>[];
-    for (final s in sources) {
-      parts.add({'text': '\n--- SOURCE: "${s.title}" ---\n'});
-      if (s.mimeType.startsWith('text/') || s.mimeType == 'application/octet-stream') {
-        parts.add({'text': s.textContent ?? ''});
-      } else if (s.base64Data != null) {
-        parts.add({'inlineData': {'mimeType': s.mimeType, 'data': s.base64Data}});
+    for (final source in sources) {
+      parts.add({'text': '\n--- SOURCE: "${source.title}" ---\n'});
+      if (source.textContent?.isNotEmpty == true) {
+        parts.add({'text': source.textContent!});
+      } else if (source.base64Data != null) {
+        parts.add({'text': '[Binary source attached: ${source.mimeType}. No extracted text is available.]'});
       }
     }
     return parts;
@@ -64,23 +95,39 @@ class GeminiService {
 
   Future<String> askGeneral({required String prompt, List<ChatMessage> history = const []}) async {
     final transcript = history.map((m) => '${m.isUser ? "User" : "Assistant"}: ${m.text}').join('\n');
-    return _generate(parts: [if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'}, {'text': 'User request:\n$prompt'}], systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. You may use current web information when the search tool is available. Do not invent facts.', webSearch: true);
+    return _generate(
+      parts: [if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'}, {'text': 'User request:\n$prompt'}],
+      systemInstruction: 'You are Inspiro AI, a helpful general-purpose study and productivity assistant inside Lodha Inspiro. Answer clearly and naturally. Do not invent facts.',
+      webSearch: true,
+    );
   }
 
   Future<String> answerFromSources({required List<NotebookSource> sources, required List<ChatMessage> history, required String question}) async {
     final transcript = history.map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}').join('\n');
-    return _generate(parts: [..._sourceParts(sources), {'text': '\n--- CONVERSATION SO FAR ---\n$transcript\n--- NEW QUESTION ---\nStudent: $question'}], systemInstruction: 'You are the AI notebook assistant inside Lodha Inspiro. Answer ONLY using the SOURCE material provided. If the sources do not contain the answer, say so plainly instead of guessing. Use plain text. At the end list source names like: Sources: "Source Title A", "Source Title B".');
+    return _generate(
+      parts: [..._sourceParts(sources), {'text': '\n--- CONVERSATION SO FAR ---\n$transcript\n--- NEW QUESTION ---\nStudent: $question'}],
+      systemInstruction: 'You are the AI notebook assistant inside Lodha Inspiro. Answer ONLY using the SOURCE material provided. If the sources do not contain the answer, say so plainly instead of guessing. Use plain text. At the end list source names like: Sources: "Source Title A", "Source Title B".',
+    );
   }
 
   Future<String> askNotebookGeneral({required String question, List<ChatMessage> history = const []}) async {
     final transcript = history.map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}').join('\n');
-    return _generate(parts: [if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'}, {'text': 'Question:\n$question'}], systemInstruction: 'You are Inspiro AI in the Notebook section. This is the separate Ask AI mode and does not require notebook sources. Answer directly using your knowledge and current web information when useful. Prefer reliable current information for changing topics. Do not invent facts. Keep answers easy for a student to understand.', webSearch: true);
+    return _generate(
+      parts: [if (transcript.isNotEmpty) {'text': 'Conversation so far:\n$transcript\n'}, {'text': 'Question:\n$question'}],
+      systemInstruction: 'You are Inspiro AI in the Notebook section. Answer directly using your knowledge. Do not invent facts. Keep answers easy for a student to understand.',
+    );
   }
 
-  Future<String> summarizeNotebook(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nWrite a concise summary of the notebook above.'}], systemInstruction: 'Summarize only the provided study material. Do not invent facts.');
+  Future<String> summarizeNotebook(List<NotebookSource> sources) => _generate(
+        parts: [..._sourceParts(sources), {'text': '\nWrite a concise summary of the notebook above.'}],
+        systemInstruction: 'Summarize only the provided study material. Do not invent facts.',
+      );
 
   Future<List<String>> suggestQuestions(List<NotebookSource> sources) async {
-    final raw = await _generate(parts: [..._sourceParts(sources), {'text': '\nList exactly 4 short questions under 12 words each. Return ONLY the 4 questions, one per line.'}], systemInstruction: 'Generate study questions from the provided source material.');
+    final raw = await _generate(
+      parts: [..._sourceParts(sources), {'text': '\nList exactly 4 short questions under 12 words each. Return ONLY the 4 questions, one per line.'}],
+      systemInstruction: 'Generate study questions from the provided source material.',
+    );
     return raw.split('\n').map((l) => l.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), '')).where((l) => l.isNotEmpty).take(4).toList();
   }
 
@@ -97,30 +144,16 @@ class GeminiService {
       final cleaned = raw.replaceFirst(RegExp(r'^```(?:json)?\s*'), '').replaceFirst(RegExp(r'\s*```$'), '').trim();
       decoded = jsonDecode(cleaned);
     }
-
-    if (decoded is! List) {
-      throw GeminiException('Gemini returned an invalid quiz format.');
-    }
+    if (decoded is! List) throw GeminiException('OpenRouter returned an invalid quiz format.');
 
     return decoded.map<NotebookQuizQuestion>((item) {
-      if (item is! Map) throw GeminiException('Gemini returned an invalid quiz question.');
+      if (item is! Map) throw GeminiException('OpenRouter returned an invalid quiz question.');
       final map = Map<String, dynamic>.from(item);
       final rawOptions = map['options'];
-      if (rawOptions is! List || rawOptions.length != 4) {
-        throw GeminiException('Gemini returned a quiz question without exactly 4 options.');
-      }
-      final options = rawOptions.map<QuizOption>((option) {
-        if (option is Map) {
-          final optionMap = Map<String, dynamic>.from(option);
-          return QuizOption(
-            text: optionMap['text']?.toString() ?? '',
-            why: optionMap['why']?.toString() ?? optionMap['explanation']?.toString() ?? '',
-          );
-        }
-        return QuizOption(text: option.toString(), why: '');
-      }).toList();
+      if (rawOptions is! List || rawOptions.length != 4) throw GeminiException('OpenRouter returned a quiz question without exactly 4 options.');
+      final options = rawOptions.map<QuizOption>((option) => QuizOption(text: option.toString(), why: map['explanation']?.toString() ?? '')).toList();
       final answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
-      if (answer < 0 || answer > 3) throw GeminiException('Gemini returned an invalid correct answer index.');
+      if (answer < 0 || answer > 3) throw GeminiException('OpenRouter returned an invalid correct answer index.');
       return NotebookQuizQuestion(
         question: map['question']?.toString() ?? '',
         options: options,
@@ -130,7 +163,10 @@ class GeminiService {
     }).toList();
   }
 
-  Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(parts: [..._sourceParts(sources), {'text': '\nCreate a concise spoken audio overview script.'}], systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.');
+  Future<String> generateAudioOverview(List<NotebookSource> sources) => _generate(
+        parts: [..._sourceParts(sources), {'text': '\nCreate a concise spoken audio overview script.'}],
+        systemInstruction: 'Write a natural student-friendly audio overview of the provided material. Do not invent facts.',
+      );
 
   Future<String> generateAudioOverviewScript(List<NotebookSource> sources) => generateAudioOverview(sources);
 }
