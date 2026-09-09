@@ -12,10 +12,7 @@ class GeminiService {
   static int _cursor = 0;
   static final Map<String, DateTime> _rateLimitedUntil = <String, DateTime>{};
 
-  List<String> _groqKeys() => AiKeyPool.keys
-      .map((String key) => key.trim())
-      .where((String key) => key.isNotEmpty)
-      .toList(growable: false);
+  List<String> _groqKeys() => AiKeyPool.groqKeys;
 
   Future<String> _generate({required String userContent, String? systemInstruction, int maxOutputTokens = 2048, bool webSearch = false}) async {
     if (classworkModeNotifier.value) throw GeminiException('Inspiro AI is disabled while monitored classwork is in progress.');
@@ -27,7 +24,6 @@ class GeminiService {
     ];
     final Map<String, dynamic> body = <String, dynamic>{'model': GroqConfig.model, 'messages': messages, 'temperature': 0.35, 'max_completion_tokens': maxOutputTokens, 'citation_options': 'disabled'};
     if (webSearch) body['tools'] = <Map<String, String>>[<String, String>{'type': 'browser_search'}];
-
     for (int attempt = 0; attempt < keys.length; attempt++) {
       final int i = (_cursor + attempt) % keys.length;
       final String key = keys[i];
