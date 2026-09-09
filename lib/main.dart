@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_preferences.dart';
 import 'app_update_service.dart';
@@ -10,6 +11,14 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
 
   await Supabase.initialize(
     url: 'https://orsarmmwvjkltpditpnt.supabase.co',
@@ -76,33 +85,60 @@ class _MyAppState extends State<MyApp> {
         final motionDuration = smoothMotionNotifier.value
             ? const Duration(milliseconds: 180)
             : Duration.zero;
+        final isDark = currentMode == ThemeMode.dark;
 
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Lodha Inspiro',
-          themeMode: currentMode,
-          themeAnimationDuration: motionDuration,
-          theme: ThemeData(
-            brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFEBF0F5),
-            fontFamily: 'Google Sans Flex',
-            splashFactory: InkSparkle.splashFactory,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
+        final systemBarStyle = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent,
+          statusBarIconBrightness:
+              isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness:
+              isDark ? Brightness.dark : Brightness.light,
+          systemNavigationBarIconBrightness:
+              isDark ? Brightness.light : Brightness.dark,
+        );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: systemBarStyle,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Lodha Inspiro',
+            themeMode: currentMode,
+            themeAnimationDuration: motionDuration,
+            theme: ThemeData(
+              brightness: Brightness.light,
+              scaffoldBackgroundColor: const Color(0xFFEBF0F5),
+              fontFamily: 'Google Sans Flex',
+              splashFactory: InkSparkle.splashFactory,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                systemOverlayStyle: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  statusBarBrightness: Brightness.light,
+                ),
+              ),
             ),
-          ),
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF121212),
-            fontFamily: 'Google Sans Flex',
-            splashFactory: InkSparkle.splashFactory,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
+            darkTheme: ThemeData(
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: const Color(0xFF121212),
+              fontFamily: 'Google Sans Flex',
+              splashFactory: InkSparkle.splashFactory,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                systemOverlayStyle: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.light,
+                  statusBarBrightness: Brightness.dark,
+                ),
+              ),
             ),
+            home: const AuthGate(),
           ),
-          home: const AuthGate(),
         );
       },
     );
