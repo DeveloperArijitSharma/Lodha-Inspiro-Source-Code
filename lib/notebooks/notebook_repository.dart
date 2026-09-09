@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'notebook_models.dart';
+import 'pdf_text_extractor.dart';
 
 /// All Supabase reads/writes for the Notebooks feature.
 /// The repository requires a real signed-in Supabase user so notebook ownership
 /// and RLS stay consistent with the database security model.
 class NotebookRepository {
   final _client = Supabase.instance.client;
+  final _pdfExtractor = const PdfTextExtractorService();
 
   String _requireUserId() {
     final userId = _client.auth.currentUser?.id;
@@ -74,6 +79,30 @@ class NotebookRepository {
 
   Future<NotebookSource> addSource(NotebookSource source) async {
     _requireUserId();
+
+    // PDFs are converted to text before they ever reach the stored source row.
+    // The extracted text is hidden from the UI and becomes the knowledge passed
+    // to Groq for Notebook Q&A, summaries, questions, quizzes and audio scripts.
+    if (source.mimeType == 'application/pdf' &&
+        source.base64Data != null &&
+        source.base64Data!.isNotEmpty) {
+      final bytes = Uint8List.fromList(base64Decode(source.base64Data!));
+      final extracted = await _pdfExtractor.extract(bytes);
+      if (extracted.trim().isEmpty) {
+        throw StateError(
+          'This PDF does not contain selectable text. Scanned/image-only PDFs need OCR before they can be used as text sources.',
+        );
+      }
+      source = NotebookSource(
+        id: source.id,
+        notebookId: source.notebookId,
+        title: source.title,
+        mimeType: source.mimeType,
+        textContent: extracted,
+        createdAt: source.createdAt,
+      );
+    }
+
     final row = await _client
         .from('notebook_sources')
         .insert(source.toInsertMap(source.notebookId))
