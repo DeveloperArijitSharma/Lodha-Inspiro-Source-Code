@@ -6,6 +6,7 @@ import 'app_update_service.dart';
 import 'notification_service.dart';
 import 'login_screen.dart';
 import 'settings_service.dart';
+import 'ui/app_ui.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -105,38 +106,8 @@ class _MyAppState extends State<MyApp> {
             title: 'Lodha Inspiro',
             themeMode: currentMode,
             themeAnimationDuration: motionDuration,
-            theme: ThemeData(
-              brightness: Brightness.light,
-              scaffoldBackgroundColor: const Color(0xFFEBF0F5),
-              fontFamily: 'Google Sans Flex',
-              splashFactory: InkSparkle.splashFactory,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                systemOverlayStyle: SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.dark,
-                  statusBarBrightness: Brightness.light,
-                ),
-              ),
-            ),
-            darkTheme: ThemeData(
-              brightness: Brightness.dark,
-              scaffoldBackgroundColor: const Color(0xFF121212),
-              fontFamily: 'Google Sans Flex',
-              splashFactory: InkSparkle.splashFactory,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                systemOverlayStyle: SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.light,
-                  statusBarBrightness: Brightness.dark,
-                ),
-              ),
-            ),
+            theme: InspiroUi.lightTheme(),
+            darkTheme: InspiroUi.darkTheme(),
             home: const AuthGate(),
           ),
         );
