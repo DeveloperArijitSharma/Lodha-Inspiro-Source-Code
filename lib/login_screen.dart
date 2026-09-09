@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'app_shell_screen.dart';
+import 'home_screen.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -16,10 +16,11 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   final _supabase = Supabase.instance.client;
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _loading = false;
-  bool _signup = false;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final Color _accentBlue = const Color(0xFF4B8DFF);
+  bool _isLoading = false;
+  bool _isSignUp = false;
 
   @override
   void initState() {
@@ -28,7 +29,7 @@ class _AuthGateState extends State<AuthGate> {
       if (data.session != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AppShellScreen()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
     });
@@ -36,30 +37,32 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final email = _email.text.trim();
-    final password = _password.text.trim();
+  Future<void> _submitAuth() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
     if (email.isEmpty || password.isEmpty) {
-      _toast('Please fill in both fields.', error: true);
+      _showToast('Please fill in all fields', error: true);
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
+
     try {
-      if (_signup) {
+      if (_isSignUp) {
         await _supabase.auth.signUp(
           email: email,
           password: password,
           data: {'username': email.split('@').first},
         );
-        _toast('Account created. You can sign in now.');
-        if (mounted) setState(() => _signup = false);
+        _showToast('Account created! You can now sign in.');
+        if (mounted) setState(() => _isSignUp = false);
       } else {
         await _supabase.auth.signInWithPassword(
           email: email,
@@ -67,20 +70,21 @@ class _AuthGateState extends State<AuthGate> {
         );
       }
     } on AuthException catch (e) {
-      _toast(e.message, error: true);
+      _showToast(e.message, error: true);
     } catch (_) {
-      _toast('Something went wrong. Please try again.', error: true);
+      _showToast('An unexpected error occurred', error: true);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _toast(String text, {bool error = false}) {
+  void _showToast(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text),
+        content: Text(message),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: error ? Colors.redAccent : const Color(0xFF4B8DFF),
+        backgroundColor: error ? CupertinoColors.systemRed : _accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     );
   }
@@ -88,29 +92,29 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_supabase.auth.currentSession != null) {
-      return const AppShellScreen();
+      return const HomeScreen();
     }
 
     final dark = Theme.of(context).brightness == Brightness.dark;
     final foreground = dark ? Colors.white : const Color(0xFF172033);
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF080C14) : const Color(0xFFF2F6FB),
+      backgroundColor: dark ? const Color(0xFF080B12) : const Color(0xFFF2F5F9),
       body: Stack(
         children: [
           Positioned(
-            top: -130,
-            left: -100,
-            child: _orb(340, const Color(0xFF4B8DFF)),
+            top: -150,
+            left: -120,
+            child: _orb(360, const Color(0xFF4B8DFF)),
           ),
           Positioned(
-            bottom: -150,
-            right: -120,
-            child: _orb(360, const Color(0xFF9A7BFF)),
+            bottom: -160,
+            right: -130,
+            child: _orb(380, const Color(0xFF9A7BFF)),
           ),
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 65, sigmaY: 65),
+              filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
               child: Container(color: Colors.transparent),
             ),
           ),
@@ -121,20 +125,29 @@ class _AuthGateState extends State<AuthGate> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(38),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                    filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                      padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
                       decoration: BoxDecoration(
                         color: dark
                             ? Colors.white.withOpacity(.07)
-                            : Colors.white.withOpacity(.68),
+                            : Colors.white.withOpacity(.70),
                         borderRadius: BorderRadius.circular(38),
                         border: Border.all(
-                          color: dark ? Colors.white.withOpacity(.13) : Colors.white,
-                          width: 1.3,
+                          color: dark
+                              ? Colors.white.withOpacity(.13)
+                              : Colors.white,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(.08),
+                            blurRadius: 35,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 76,
@@ -142,6 +155,8 @@ class _AuthGateState extends State<AuthGate> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                                 colors: [
                                   Color(0xFF4B8DFF),
                                   Color(0xFF9A7BFF),
@@ -149,7 +164,7 @@ class _AuthGateState extends State<AuthGate> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF4B8DFF).withOpacity(.25),
+                                  color: _accentBlue.withOpacity(.25),
                                   blurRadius: 30,
                                 ),
                               ],
@@ -166,53 +181,83 @@ class _AuthGateState extends State<AuthGate> {
                             style: TextStyle(
                               color: foreground,
                               fontSize: 30,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.7,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 7),
                           Text(
-                            _signup
+                            _isSignUp
                                 ? 'Create your student space.'
                                 : 'Your fluid study space, ready.',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: foreground.withOpacity(.58),
                               fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 26),
-                          _Field(
-                            controller: _email,
-                            placeholder: 'Email',
+                          const SizedBox(height: 28),
+                          _glassTextField(
+                            controller: _emailController,
+                            hint: 'Email Address',
                             icon: CupertinoIcons.mail,
+                            dark: dark,
+                            keyboardType: TextInputType.emailAddress,
                           ),
-                          const SizedBox(height: 12),
-                          _Field(
-                            controller: _password,
-                            placeholder: 'Password',
+                          const SizedBox(height: 14),
+                          _glassTextField(
+                            controller: _passwordController,
+                            hint: 'Password',
                             icon: CupertinoIcons.lock,
-                            obscure: true,
+                            dark: dark,
+                            obscureText: true,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 22),
                           SizedBox(
                             width: double.infinity,
+                            height: 54,
                             child: CupertinoButton.filled(
-                              onPressed: _loading ? null : _submit,
-                              borderRadius: BorderRadius.circular(22),
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              child: _loading
-                                  ? const CupertinoActivityIndicator(color: Colors.white)
-                                  : Text(_signup ? 'Create account' : 'Continue'),
+                              borderRadius: BorderRadius.circular(20),
+                              padding: EdgeInsets.zero,
+                              onPressed: _isLoading ? null : _submitAuth,
+                              child: _isLoading
+                                  ? const CupertinoActivityIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : Text(
+                                      _isSignUp ? 'Sign Up' : 'Sign In',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          CupertinoButton(
-                            onPressed: _loading
-                                ? null
-                                : () => setState(() => _signup = !_signup),
-                            child: Text(
-                              _signup
-                                  ? 'Already have an account? Sign in'
-                                  : 'New here? Create an account',
+                          const SizedBox(height: 18),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _isSignUp = !_isSignUp);
+                            },
+                            child: Text.rich(
+                              TextSpan(
+                                text: _isSignUp
+                                    ? 'Already have an account? '
+                                    : "Don't have an account? ",
+                                style: TextStyle(
+                                  color: foreground.withOpacity(.58),
+                                  fontSize: 14,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: _isSignUp ? 'Sign In' : 'Sign Up',
+                                    style: TextStyle(
+                                      color: _accentBlue,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -228,66 +273,64 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
+  Widget _glassTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required bool dark,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: dark
+            ? Colors.black.withOpacity(.24)
+            : Colors.white.withOpacity(.52),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: dark ? Colors.white12 : Colors.white,
+        ),
+      ),
+      child: CupertinoTextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        prefix: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 10),
+          child: Icon(
+            icon,
+            size: 20,
+            color: dark ? Colors.white60 : Colors.black45,
+          ),
+        ),
+        placeholder: hint,
+        placeholderStyle: TextStyle(
+          color: dark ? Colors.white54 : Colors.black45,
+        ),
+        style: TextStyle(
+          color: dark ? Colors.white : Colors.black87,
+          fontSize: 15,
+        ),
+        decoration: const BoxDecoration(),
+      ),
+    );
+  }
+
   Widget _orb(double size, Color color) {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(.18),
+        color: color.withOpacity(.15),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(.18),
-            blurRadius: 90,
+            blurRadius: 100,
             spreadRadius: 25,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  final TextEditingController controller;
-  final String placeholder;
-  final IconData icon;
-  final bool obscure;
-
-  const _Field({
-    required this.controller,
-    required this.placeholder,
-    required this.icon,
-    this.obscure = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: dark
-                ? Colors.white.withOpacity(.07)
-                : Colors.white.withOpacity(.72),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: dark ? Colors.white12 : Colors.white,
-            ),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            decoration: InputDecoration(
-              prefixIcon: Icon(icon),
-              hintText: placeholder,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ),
       ),
     );
   }
