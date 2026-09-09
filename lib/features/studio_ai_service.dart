@@ -9,14 +9,13 @@ class StudioAiService {
   static final Map<String, DateTime> _rateLimitedUntil = {};
 
   Future<String> generate(String prompt) async {
-    final keys = AiKeyPool.availableGeminiKeys;
+    final keys = AiKeyPool.availableGroqKeys;
     if (keys.isEmpty) {
       throw GeminiException(
-        'Studio AI has no Gemini key. Configure GEMINI_API_KEY_1 through GEMINI_API_KEY_10.',
+        'Studio AI has no Groq key. Configure GROQ_API_KEY_1 through GROQ_API_KEY_10.',
       );
     }
 
-    var attemptedKey = false;
     for (var attempt = 0; attempt < keys.length; attempt++) {
       final i = (_cursor + attempt) % keys.length;
       final key = keys[i];
@@ -24,74 +23,69 @@ class StudioAiService {
       if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
         continue;
       }
-      attemptedKey = true;
 
       try {
-        final r = await http.post(
+        final response = await http.post(
           Uri.parse(GroqConfig.endpoint),
           headers: {
-            'x-goog-api-key': key,
+            'Authorization': 'Bearer $key',
             'Content-Type': 'application/json',
           },
           body: jsonEncode({
-            'contents': [
+            'model': GroqConfig.model,
+            'messages': [
               {
-                'role': 'user',
-                'parts': [
-                  {
-                    'text':
-                        'You create safe, clear, age-appropriate student classwork. Return only the format requested.\n\n$prompt',
-                  },
-                ],
+                'role': 'system',
+                'content':
+                    'You create safe, clear, age-appropriate student classwork. Return only the format requested.',
               },
+              {'role': 'user', 'content': prompt},
             ],
-            'generationConfig': {
-              'temperature': 0.35,
-              'maxOutputTokens': 2500,
-            },
+            'temperature': 0.35,
+            'max_completion_tokens': 2500,
+            'citation_options': 'disabled',
           }),
         );
 
-        if (r.statusCode >= 200 && r.statusCode < 300) {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
           _rateLimitedUntil.remove(key);
           _cursor = (i + 1) % keys.length;
-          final d = jsonDecode(r.body) as Map<String, dynamic>;
-          final candidates = d['candidates'];
-          if (candidates is! List || candidates.isEmpty) continue;
-          final candidate = candidates.first;
-          if (candidate is! Map) continue;
-          final content = candidate['content'];
-          if (content is! Map) continue;
-          final parts = content['parts'];
-          if (parts is! List) continue;
-          final text = parts
-              .whereType<Map>()
-              .map((p) => p['text']?.toString() ?? '')
-              .where((s) => s.isNotEmpty)
-              .join();
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final choices = data['choices'];
+          if (choices is! List || choices.isEmpty) continue;
+          final first = choices.first;
+          if (first is! Map) continue;
+          final message = first['message'];
+          if (message is! Map) continue;
+          final text = message['content']?.toString().trim() ?? '';
           if (text.isNotEmpty) return text;
           continue;
         }
 
-        if (r.statusCode == 429 || r.statusCode == 403 || r.statusCode >= 500) {
-          // Keep quota/rate-limit details out of the student UI and silently
-          // retry the exact same request with another configured key.
-          if (r.statusCode == 429 || r.statusCode == 403) {
-            _rateLimitedUntil[key] = DateTime.now().add(const Duration(minutes: 2));
+        if (response.statusCode == 429 ||
+            response.statusCode == 403 ||
+            response.statusCode >= 500) {
+          if (response.statusCode == 429 || response.statusCode == 403) {
+            _rateLimitedUntil[key] =
+                DateTime.now().add(const Duration(minutes: 2));
           }
           continue;
         }
-
         break;
       } catch (_) {
-        // A failed key must not prevent another configured key from answering.
         continue;
       }
     }
 
-    if (!attemptedKey) {
+    final allCooling = keys.every((key) {
+      final until = _rateLimitedUntil[key];
+      return until != null && until.isAfter(DateTime.now());
+    });
+    if (allCooling) {
       throw GeminiException('Studio AI is temporarily busy. Please try again.');
     }
-    throw GeminiException('Studio AI is temporarily unavailable. Please try again.');
+    throw GeminiException(
+      'Studio AI is temporarily unavailable. Please try again.',
+    );
   }
 }
