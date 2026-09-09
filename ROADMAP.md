@@ -91,6 +91,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Hardened database function search paths
 - [x] Chat participant isolation policies
 - [x] Private chat attachment storage policies
+- [x] Private File Manager storage and metadata policies
 - [ ] Move Groq requests behind a Supabase Edge Function
 - [ ] Keep API secrets out of the Flutter client
 - [ ] Move large source files to Supabase Storage
@@ -115,15 +116,34 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [ ] CI Android build checks
 - [ ] Clean release configuration
 
+## 8. File Manager
+
+- [x] Central File Manager service and private Supabase storage
+- [x] Supported PDF, TXT, MD, DOCX, XLSX, PPTX and common image files
+- [x] Store school, AI, notebook and personal files in one place
+- [x] Rename and delete files inside the app
+- [x] In-app editing for TXT and Markdown files
+- [x] Hidden PDF text extraction for AI-supported PDFs
+- [x] AI-ready flag for PDF, TXT and Markdown files
+- [x] Search and category filtering
+- [x] Smart folders for School Work, AI Work, Notebook Notes and Personal files
+- [x] Analyze & Organize action using filename, extension and source metadata without spending Groq tokens
+- [ ] Connect File Manager files directly to every AI composer
+- [ ] Connect Notebook exports/sources directly into File Manager
+- [ ] Teacher-managed school material publishing flow
+- [ ] Rich previews for Office files
+- [ ] Optional local/offline file metadata cache
+
 ## Current Build Order
 
 1. Smart Groq token-efficiency and Notebook source retrieval
-2. Classroom UI and integration
-3. Advanced messaging UI and integration
-4. Notebook 2.0 citations and source UX
-5. Notifications/realtime
-6. Backend security hardening
-7. UI polish, tests and release readiness
+2. File Manager foundation and smart organization
+3. Classroom UI and integration
+4. Advanced messaging UI and integration
+5. Notebook 2.0 citations and source UX
+6. Notifications/realtime
+7. Backend security hardening
+8. UI polish, tests and release readiness
 
 ## Groq Token-Efficiency Plan
 
@@ -164,5 +184,6 @@ The app uses Groq as the single AI provider. No FreeLLMAPI or multi-provider gat
 - **Batch 2:** Android note downloads and reusable Liquid Glass building blocks were added, followed by Home Inspiro AI, optional web search, announcements integration, voice-to-text composer support, private chat attachment handling, demo classwork, and AI-generated classwork in Notebook Studio.
 - **Batch 2 also:** notebook AI chat now has a distinct Ask AI + Web mode, and generated classwork can be opened and completed inside the app.
 - **Groq token-efficiency update:** PDF text remains stored as source knowledge, while Notebook AI now uses bounded/relevant context instead of repeatedly sending entire large sources.
+- **File Manager update:** files now have a private storage/metadata foundation, smart local categorization, in-app text editing, and a unified place for school, AI, notebook and personal files.
 
 This roadmap is a living plan. Features can be changed, expanded or removed as the prototype grows.
