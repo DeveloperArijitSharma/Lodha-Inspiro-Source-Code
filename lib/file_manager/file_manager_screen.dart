@@ -265,6 +265,19 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
   }
 
+  Future<void> _askInspiro(Map<String, dynamic> file) async {
+    if (file['ai_supported'] != true) {
+      _toast('Inspiro AI supports PDF, TXT and Markdown files.');
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FileAiChatScreen(file: file),
+      ),
+    );
+  }
+
   Future<void> _moveFile(Map<String, dynamic> file) async {
     final folders = await _service.listFolders(parentId: _folderId);
     final target = await showCupertinoModalPopup<String?>(
@@ -379,12 +392,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(sheetContext);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FileAiChatScreen(file: file),
-                  ),
-                );
+                _askInspiro(file);
               },
               child: const Text('Ask Inspiro AI'),
             ),
@@ -556,6 +564,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                           foreground: foreground,
                           onOpen: () => _openFile(file),
                           onInfo: () => _info(file),
+                          onAskAi: () => _askInspiro(file),
                           onMove: () => _moveFile(file),
                           onRename: () => _renameFile(file),
                           onDelete: () => _deleteFile(file),
@@ -940,6 +949,7 @@ class _FileTile extends StatelessWidget {
   final Color foreground;
   final VoidCallback onOpen;
   final VoidCallback onInfo;
+  final VoidCallback onAskAi;
   final VoidCallback onMove;
   final VoidCallback onRename;
   final VoidCallback onDelete;
@@ -950,6 +960,7 @@ class _FileTile extends StatelessWidget {
     required this.foreground,
     required this.onOpen,
     required this.onInfo,
+    required this.onAskAi,
     required this.onMove,
     required this.onRename,
     required this.onDelete,
@@ -1013,6 +1024,16 @@ class _FileTile extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (ai)
+                      CupertinoButton(
+                        padding: const EdgeInsets.all(6),
+                        onPressed: onAskAi,
+                        child: const Icon(
+                          CupertinoIcons.sparkles,
+                          color: Color(0xFF4B8DFF),
+                          size: 21,
+                        ),
+                      ),
                     CupertinoButton(
                       padding: const EdgeInsets.all(6),
                       onPressed: onInfo,
@@ -1035,6 +1056,14 @@ class _FileTile extends StatelessWidget {
                               },
                               child: const Text('Open'),
                             ),
+                            if (ai)
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  onAskAi();
+                                },
+                                child: const Text('Ask Inspiro AI'),
+                              ),
                             CupertinoActionSheetAction(
                               onPressed: () {
                                 Navigator.pop(context);
