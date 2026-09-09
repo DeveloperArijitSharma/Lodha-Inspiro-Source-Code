@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../gemini/ai_key_pool.dart';
 import '../gemini/groq_config.dart';
 import '../gemini/gemini_service.dart';
 
@@ -8,7 +7,13 @@ class StudioAiService {
   static int _cursor = 0;
   static final Map<String, DateTime> _rateLimitedUntil = <String, DateTime>{};
 
-  List<String> _groqKeys() => AiKeyPool.groqKeys;
+  List<String> _groqKeys() => <String>[
+    String.fromEnvironment('GROQ_API_KEY_1'), String.fromEnvironment('GROQ_API_KEY_2'),
+    String.fromEnvironment('GROQ_API_KEY_3'), String.fromEnvironment('GROQ_API_KEY_4'),
+    String.fromEnvironment('GROQ_API_KEY_5'), String.fromEnvironment('GROQ_API_KEY_6'),
+    String.fromEnvironment('GROQ_API_KEY_7'), String.fromEnvironment('GROQ_API_KEY_8'),
+    String.fromEnvironment('GROQ_API_KEY_9'), String.fromEnvironment('GROQ_API_KEY_10'),
+  ].map((String key) => key.trim()).where((String key) => key.isNotEmpty).toList(growable: false);
 
   Future<String> generate(String prompt) async {
     final List<String> keys = _groqKeys();
@@ -19,20 +24,10 @@ class StudioAiService {
       final DateTime? blockedUntil = _rateLimitedUntil[key];
       if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) continue;
       try {
-        final http.Response response = await http.post(Uri.parse(GroqConfig.endpoint), headers: <String, String>{'Authorization': 'Bearer $key', 'Content-Type': 'application/json'}, body: jsonEncode(<String, dynamic>{
-          'model': GroqConfig.model,
-          'messages': <Map<String, String>>[
-            <String, String>{'role': 'system', 'content': 'You create safe, clear, age-appropriate student classwork. Return only the format requested.'},
-            <String, String>{'role': 'user', 'content': prompt},
-          ],
-          'temperature': 0.35,
-          'max_completion_tokens': 2500,
-          'citation_options': 'disabled',
-        }));
+        final http.Response response = await http.post(Uri.parse(GroqConfig.endpoint), headers: <String, String>{'Authorization': 'Bearer $key', 'Content-Type': 'application/json'}, body: jsonEncode(<String, dynamic>{'model': GroqConfig.model, 'messages': <Map<String, String>>[<String, String>{'role': 'system', 'content': 'You create safe, clear, age-appropriate student classwork. Return only the format requested.'}, <String, String>{'role': 'user', 'content': prompt}], 'temperature': 0.35, 'max_completion_tokens': 2500, 'citation_options': 'disabled'}));
         if (response.statusCode >= 200 && response.statusCode < 300) {
           _rateLimitedUntil.remove(key);
-          final int nextCursor = i + 1;
-          _cursor = nextCursor >= keys.length ? 0 : nextCursor;
+          _cursor = (i + 1) % keys.length;
           final dynamic decoded = jsonDecode(response.body);
           if (decoded is! Map<String, dynamic>) continue;
           final dynamic choices = decoded['choices'];
@@ -47,9 +42,7 @@ class StudioAiService {
         }
         if (response.statusCode == 429 || response.statusCode == 403) _rateLimitedUntil[key] = DateTime.now().add(const Duration(minutes: 2));
         continue;
-      } catch (_) {
-        continue;
-      }
+      } catch (_) { continue; }
     }
     final DateTime now = DateTime.now();
     final bool allCooling = keys.every((String key) { final DateTime? until = _rateLimitedUntil[key]; return until != null && until.isAfter(now); });
