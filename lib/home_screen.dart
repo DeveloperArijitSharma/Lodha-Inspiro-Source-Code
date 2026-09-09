@@ -192,13 +192,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       key: const ValueKey(1),
       padding: EdgeInsets.only(bottom: size.height * 0.11),
-      child: Column(children: [
-        const Expanded(child: ClassroomScreen()),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemoClassworkScreen())), icon: const Icon(Icons.science_rounded), label: const Text('Try demo classwork', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)))),
-        ),
-      ]),
+      child: Column(
+        children: [
+          const Expanded(child: ClassroomScreen()),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemoClassworkScreen())), icon: const Icon(Icons.science_rounded), label: const Text('Try demo classwork', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)))),
+          ),
+        ],
+      ),
     );
   }
 
@@ -217,20 +219,56 @@ class _HomeScreenState extends State<HomeScreen> {
     return Stack(
       key: const ValueKey(2),
       children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: EdgeInsets.fromLTRB(padding, size.height * 0.02, padding, 0), child: _buildHeader('Messages', textColor)),
-          SizedBox(height: size.height * 0.02),
-          Padding(padding: EdgeInsets.symmetric(horizontal: padding), child: _buildLiquidGlassChatTabs(isDark)),
-          SizedBox(height: size.height * 0.02),
-          Expanded(
-            child: _isLoadingChats
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF32C5FF)))
-                : filteredChats.isEmpty
-                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(_selectedChatTab == 0 ? Icons.person_outline : _selectedChatTab == 1 ? Icons.school_outlined : Icons.groups_outlined, size: 64, color: isDark ? Colors.white30 : Colors.black26), const SizedBox(height: 16), Text(_selectedChatTab == 0 ? 'No classmates added yet' : _selectedChatTab == 1 ? 'No teachers added yet' : 'No groups created yet', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 16, fontFamily: 'Google Sans Flex'))]))
-                    : ListView.builder(padding: EdgeInsets.only(bottom: size.height * 0.22, left: padding, right: padding), itemCount: filteredChats.length, itemBuilder: (context, index) { final chat = filteredChats[index]; return GestureDetector(onLongPress: () => _deleteChat(chat['id'], chat['chat_name']), child: _buildChatTile(chat['id'], chat['chat_name'], chat['chat_type'], isDark)); }),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(padding: EdgeInsets.fromLTRB(padding, size.height * 0.02, padding, 0), child: _buildHeader('Messages', textColor)),
+            SizedBox(height: size.height * 0.02),
+            Padding(padding: EdgeInsets.symmetric(horizontal: padding), child: _buildLiquidGlassChatTabs(isDark)),
+            SizedBox(height: size.height * 0.02),
+            Expanded(
+              child: _isLoadingChats
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF32C5FF)))
+                  : filteredChats.isEmpty
+                      ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(_selectedChatTab == 0 ? Icons.person_outline : _selectedChatTab == 1 ? Icons.school_outlined : Icons.groups_outlined, size: 64, color: isDark ? Colors.white30 : Colors.black26), const SizedBox(height: 16), Text(_selectedChatTab == 0 ? 'No classmates added yet' : _selectedChatTab == 1 ? 'No teachers added yet' : 'No groups created yet', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 16, fontFamily: 'Google Sans Flex'))]))
+                      : ListView.builder(
+                          padding: EdgeInsets.only(bottom: size.height * 0.22, left: padding, right: padding),
+                          itemCount: filteredChats.length,
+                          itemBuilder: (context, index) {
+                            final chat = filteredChats[index];
+                            return GestureDetector(onLongPress: () => _deleteChat(chat['id'], chat['chat_name']), child: _buildChatTile(chat['id'], chat['chat_name'], chat['chat_type'], isDark));
+                          },
+                        ),
+            ),
+          ],
+        ),
+        Positioned(
+          right: padding,
+          bottom: size.height * 0.22,
+          child: GestureDetector(
+            onTap: () {
+              if (hapticsNotifier.value) HapticFeedback.lightImpact();
+              _showAddChatDialog(isDark, _accentBlue);
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  height: 60,
+                  width: 60,
+                  decoration: BoxDecoration(
+                    color: _accentBlue.withOpacity(0.85),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                    boxShadow: [BoxShadow(color: _accentBlue.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+                ),
+              ),
+            ),
           ),
-        ]),
-        Positioned(right: padding, bottom: size.height * 0.22, child: GestureDetector(onTap: () { if (hapticsNotifier.value) HapticFeedback.lightImpact(); _showAddChatDialog(isDark, _accentBlue); }, child: ClipRRect(borderRadius: BorderRadius.circular(30), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: Container(height: 60, width: 60, decoration: BoxDecoration(color: _accentBlue.withOpacity(0.85), shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5), boxShadow: [BoxShadow(color: _accentBlue.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))]), child: const Icon(Icons.add_rounded, color: Colors.white, size: 32))))))),
+        ),
       ],
     );
   }
@@ -251,34 +289,71 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSettingsScreenContent(Size size, double padding, bool isDark) {
     final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    return SingleChildScrollView(key: const ValueKey(3), padding: EdgeInsets.fromLTRB(padding, size.height * 0.02, padding, size.height * 0.22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _buildHeader('Settings', textColor),
-      SizedBox(height: size.height * 0.03),
-      Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')]),
-      SizedBox(height: size.height * 0.025),
-      Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: _accentBlue), const SizedBox(width: 12), Text('Light Mode', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Google Sans Flex'))]), Switch.adaptive(value: !isDark, activeColor: _accentBlue, onChanged: (value) { if (hapticsNotifier.value) HapticFeedback.selectionClick(); themeNotifier.value = value ? ThemeMode.light : ThemeMode.dark; })])),
-      SizedBox(height: size.height * 0.025),
-      AdvancedSettingsSection(isDark: isDark, accentColor: _accentBlue),
-      SizedBox(height: size.height * 0.025),
-      SizedBox(width: double.infinity, height: size.height * 0.065, child: ElevatedButton.icon(onPressed: _signOut, icon: const Icon(Icons.logout_rounded, color: Colors.white), label: const Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Google Sans Flex')), style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0))),
-    ]));
+    return SingleChildScrollView(
+      key: const ValueKey(3),
+      padding: EdgeInsets.fromLTRB(padding, size.height * 0.02, padding, size.height * 0.22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader('Settings', textColor),
+          SizedBox(height: size.height * 0.03),
+          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')])),
+          SizedBox(height: size.height * 0.025),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: _accentBlue), const SizedBox(width: 12), Text('Light Mode', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Google Sans Flex'))]), Switch.adaptive(value: !isDark, activeColor: _accentBlue, onChanged: (value) { if (hapticsNotifier.value) HapticFeedback.selectionClick(); themeNotifier.value = value ? ThemeMode.light : ThemeMode.dark; })])),
+          SizedBox(height: size.height * 0.025),
+          AdvancedSettingsSection(isDark: isDark, accentColor: _accentBlue),
+          SizedBox(height: size.height * 0.025),
+          SizedBox(width: double.infinity, height: size.height * 0.065, child: ElevatedButton.icon(onPressed: _signOut, icon: const Icon(Icons.logout_rounded, color: Colors.white), label: const Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Google Sans Flex')), style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0))),
+        ],
+      ),
+    );
   }
 
   Widget _buildGlassDrawer(Size size, bool isDark) {
-    return Drawer(backgroundColor: Colors.transparent, elevation: 0, child: ClipRRect(borderRadius: const BorderRadius.horizontal(right: Radius.circular(40)), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30), child: Container(decoration: BoxDecoration(color: isDark ? Colors.black.withOpacity(0.4) : Colors.white.withOpacity(0.5), border: Border(right: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : Colors.white.withOpacity(0.8), width: 1.5))), child: SafeArea(child: Padding(padding: EdgeInsets.symmetric(horizontal: size.width * 0.06, vertical: size.height * 0.02), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [CircleAvatar(radius: size.width * 0.075, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 28)), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
-      SizedBox(height: size.height * 0.02), Divider(color: isDark ? Colors.white12 : Colors.black12, thickness: 1.5), SizedBox(height: size.height * 0.02),
-      _buildSidebarItem(icon: Icons.home_rounded, title: 'Dashboard', index: 0, isDark: isDark), SizedBox(height: size.height * 0.01),
-      _buildSidebarItem(icon: Icons.assignment_rounded, title: 'Classwork', index: 1, isDark: isDark), SizedBox(height: size.height * 0.01),
-      ListTile(leading: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Notebooks', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const NotebooksListScreen())); }),
-      SizedBox(height: size.height * 0.01),
-      ListTile(leading: Icon(Icons.folder_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('File Manager', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const FileManagerScreen())); }),
-      SizedBox(height: size.height * 0.01),
-      _buildSidebarItem(icon: Icons.chat_bubble_rounded, title: 'Messages', index: 3, isDark: isDark), SizedBox(height: size.height * 0.01),
-      _buildSidebarItem(icon: Icons.settings_outlined, title: 'Settings', index: 4, isDark: isDark),
-      if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[SizedBox(height: size.height * 0.01), ListTile(leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen())); })],
-      const Spacer(), ListTile(leading: const Icon(Icons.logout_rounded, color: Colors.redAccent), title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), onTap: _signOut),
-    ])))))));
+    return Drawer(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(40)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Container(
+            decoration: BoxDecoration(color: isDark ? Colors.black.withOpacity(0.4) : Colors.white.withOpacity(0.5), border: Border(right: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : Colors.white.withOpacity(0.8), width: 1.5))),
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.06, vertical: size.height * 0.02),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [CircleAvatar(radius: size.width * 0.075, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 28)), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
+                    SizedBox(height: size.height * 0.02),
+                    Divider(color: isDark ? Colors.white12 : Colors.black12, thickness: 1.5),
+                    SizedBox(height: size.height * 0.02),
+                    _buildSidebarItem(icon: Icons.home_rounded, title: 'Dashboard', index: 0, isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    _buildSidebarItem(icon: Icons.assignment_rounded, title: 'Classwork', index: 1, isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    ListTile(leading: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Notebooks', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const NotebooksListScreen())); }),
+                    SizedBox(height: size.height * 0.01),
+                    ListTile(leading: Icon(Icons.folder_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('File Manager', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const FileManagerScreen())); }),
+                    SizedBox(height: size.height * 0.01),
+                    _buildSidebarItem(icon: Icons.chat_bubble_rounded, title: 'Messages', index: 3, isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    _buildSidebarItem(icon: Icons.settings_outlined, title: 'Settings', index: 4, isDark: isDark),
+                    if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[
+                      SizedBox(height: size.height * 0.01),
+                      ListTile(leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen())); }),
+                    ],
+                    const Spacer(),
+                    ListTile(leading: const Icon(Icons.logout_rounded, color: Colors.redAccent), title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), onTap: _signOut),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSidebarItem({required IconData icon, required String title, required int index, required bool isDark}) {
@@ -301,12 +376,17 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isLoading = false;
     showDialog(context: context, barrierColor: Colors.black.withOpacity(0.4), builder: (context) => StatefulBuilder(builder: (context, setStateDialog) {
       Future<void> handleAddUser() async {
-        final email = emailController.text.trim(); if (email.isEmpty) return;
+        final email = emailController.text.trim();
+        if (email.isEmpty) return;
         final typeStr = _selectedChatTab == 0 ? 'classmate' : _selectedChatTab == 1 ? 'teacher' : 'group';
-        final chatName = _selectedChatTab == 2 ? groupController.text.trim() : email; if (chatName.isEmpty) return;
+        final chatName = _selectedChatTab == 2 ? groupController.text.trim() : email;
+        if (chatName.isEmpty) return;
         setStateDialog(() => isLoading = true);
         try {
-          if (_selectedChatTab != 2) { final userExists = await supabase.rpc('check_email_exists', params: {'lookup_email': email}); if (userExists != true) { Navigator.pop(context); _showGlassSnackBar('User not found. They must sign up first!', isError: true); return; } }
+          if (_selectedChatTab != 2) {
+            final userExists = await supabase.rpc('check_email_exists', params: {'lookup_email': email});
+            if (userExists != true) { Navigator.pop(context); _showGlassSnackBar('User not found. They must sign up first!', isError: true); return; }
+          }
           await supabase.from('chats').insert({'chat_name': chatName, 'chat_type': typeStr});
           Navigator.pop(context); _fetchChatsFromSupabase(); _showGlassSnackBar('Chat created successfully! ✨');
         } catch (e) { Navigator.pop(context); _showGlassSnackBar('Database error saving chat.', isError: true); }
