@@ -29,79 +29,52 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   };
 
   @override
-  void initState() {
-    super.initState();
-    _search.addListener(() => setState(() {}));
-    _refresh();
-  }
-
+  void initState() { super.initState(); _search.addListener(() => setState(() {})); _refresh(); }
   @override
   void dispose() { _search.dispose(); super.dispose(); }
 
   Future<void> _refresh() async {
     setState(() => _loading = true);
-    try {
-      final files = await _service.listFiles();
-      if (mounted) setState(() => _files = files);
-    } catch (_) {
-      if (mounted) _snack('Could not load File Manager.', error: true);
-    } finally { if (mounted) setState(() => _loading = false); }
+    try { final files = await _service.listFiles(); if (mounted) setState(() => _files = files); }
+    catch (_) { if (mounted) _snack('Could not load File Manager.', error: true); }
+    finally { if (mounted) setState(() => _loading = false); }
   }
 
   Future<void> _addFiles() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        withData: true,
-        type: FileType.custom,
-        allowedExtensions: FileManagerService.supportedExtensions.toList(),
-      );
+      final result = await FilePicker.platform.pickFiles(allowMultiple: true, withData: true, type: FileType.custom, allowedExtensions: FileManagerService.supportedExtensions.toList());
       if (result == null) return;
       final user = _service.currentUserId;
       if (user == null) throw StateError('Please sign in again.');
-      for (final file in result.files) {
-        final bytes = file.bytes;
-        if (bytes != null && bytes.isNotEmpty) await _service.uploadBytes(user, file.name, bytes);
-      }
-      await _refresh();
-      if (mounted) _snack('Files added to File Manager.');
+      for (final file in result.files) { final bytes = file.bytes; if (bytes != null && bytes.isNotEmpty) await _service.uploadBytes(user, file.name, bytes); }
+      await _refresh(); if (mounted) _snack('Files added to File Manager.');
     } catch (e) { if (mounted) _snack('Could not add files: $e', error: true); }
   }
 
   Future<void> _organize() async {
     if (_organizing) return;
     setState(() => _organizing = true);
-    try {
-      await _service.analyzeAndOrganize();
-      await _refresh();
-      if (mounted) _snack('Files analyzed and organized. ✨');
-    } catch (_) { if (mounted) _snack('Could not organize files.', error: true); }
+    try { await _service.analyzeAndOrganize(); await _refresh(); if (mounted) _snack('Files analyzed and organized. ✨'); }
+    catch (_) { if (mounted) _snack('Could not organize files.', error: true); }
     finally { if (mounted) setState(() => _organizing = false); }
   }
 
   List<Map<String, dynamic>> get _visible {
     final q = _search.text.trim().toLowerCase();
-    return _files.where((file) {
-      final name = file['name'].toString().toLowerCase();
-      return (_category == 'all' || file['category'] == _category) && (q.isEmpty || name.contains(q));
-    }).toList();
+    return _files.where((file) => (_category == 'all' || file['category'] == _category) && (q.isEmpty || file['name'].toString().toLowerCase().contains(q))).toList();
   }
 
   void _snack(String text, {bool error = false}) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: error ? Colors.redAccent : const Color(0xFF32C5FF), content: Text(text)));
 
   Future<void> _open(Map<String, dynamic> file) async {
+    if (file['ai_supported'] == true) {
+      final useAi = await showModalBottomSheet<bool>(context: context, backgroundColor: Colors.transparent, builder: (_) => _FileActionSheet(file: file));
+      if (useAi == true && mounted) { await Navigator.push(context, MaterialPageRoute(builder: (_) => FileAiChatScreen(file: file))); return; }
+    }
     final ext = file['extension'].toString();
     if (ext == 'txt' || ext == 'md') {
       final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => FileEditorScreen(file: file)));
-      if (changed == true) await _refresh();
-      return;
-    }
-    if (file['ai_supported'] == true) {
-      final useAi = await showModalBottomSheet<bool>(context: context, backgroundColor: Colors.transparent, builder: (_) => _FileActionSheet(file: file));
-      if (useAi == true && mounted) {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => FileAiChatScreen(file: file)));
-        return;
-      }
+      if (changed == true) await _refresh(); return;
     }
     try {
       final bytes = await _service.download(file);
@@ -111,22 +84,14 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
   Future<void> _rename(Map<String, dynamic> file) async {
     final controller = TextEditingController(text: file['name'].toString());
-    final name = await showDialog<String>(context: context, builder: (_) => AlertDialog(
-      title: const Text('Rename file', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),
-      content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'File name')),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Rename'))],
-    ));
+    final name = await showDialog<String>(context: context, builder: (_) => AlertDialog(title: const Text('Rename file', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)), content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'File name')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Rename'))]));
     if (name == null || name.trim().isEmpty || name.trim() == file['name']) return;
     try { await _service.rename(file, name); await _refresh(); if (mounted) _snack('File renamed.'); }
     catch (e) { if (mounted) _snack('Could not rename file: $e', error: true); }
   }
 
   Future<void> _delete(Map<String, dynamic> file) async {
-    final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-      title: const Text('Delete file?', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)),
-      content: Text('Remove “${file['name']}” from File Manager?'),
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.redAccent), child: const Text('Delete'))],
-    ));
+    final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Delete file?', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)), content: Text('Remove “${file['name']}” from File Manager?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.redAccent), child: const Text('Delete'))]));
     if (yes != true) return;
     try { await _service.delete(file); await _refresh(); if (mounted) _snack('File deleted.'); }
     catch (_) { if (mounted) _snack('Could not delete file.', error: true); }
@@ -145,8 +110,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _categories.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) { final e = _categories.entries.elementAt(i); return ChoiceChip(selected: _category == e.key, label: Text(e.value, style: const TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.w600)), onSelected: (_) => setState(() => _category = e.key), selectedColor: const Color(0xFF32C5FF).withOpacity(.2)); })),
         const SizedBox(height: 18), _SmartFolders(files: _files, selected: _category, dark: dark, onSelect: (v) => setState(() => _category = v)), const SizedBox(height: 18),
         if (_loading) const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())) else if (_visible.isEmpty) _EmptyState(dark: dark, onAdd: _addFiles) else ..._visible.map((file) => _FileTile(file: file, dark: dark, onOpen: () => _open(file), onRename: () => _rename(file), onDelete: () => _delete(file))),
-      ]),
-      Positioned(left: 18, right: 18, bottom: 14, child: _AddButton(onPressed: _addFiles)),
+      ]), Positioned(left: 18, right: 18, bottom: 14, child: _AddButton(onPressed: _addFiles)),
     ])));
   }
 }
