@@ -12,7 +12,12 @@ class GeminiService {
   GeminiService._();
   static final GeminiService instance = GeminiService._();
   static int _cursor = 0;
-  static final Map<String, DateTime> _rateLimitedUntil = {};
+  static final Map<String, DateTime> _rateLimitedUntil = <String, DateTime>{};
+
+  List<String> _groqKeys() => AiKeyPool.groqKeys
+      .map((String key) => key.trim())
+      .where((String key) => key.isNotEmpty)
+      .toList(growable: false);
 
   Future<String> _generate({
     required String userContent,
@@ -26,20 +31,20 @@ class GeminiService {
       );
     }
 
-    final keys = AiKeyPool.availableGroqKeys;
+    final List<String> keys = _groqKeys();
     if (keys.isEmpty) {
       throw GeminiException(
         'No Groq API key is configured. Add GROQ_API_KEY_1 through GROQ_API_KEY_10 as Dart defines.',
       );
     }
 
-    final messages = <Map<String, dynamic>>[
+    final List<Map<String, dynamic>> messages = <Map<String, dynamic>>[
       if (systemInstruction != null && systemInstruction.trim().isNotEmpty)
-        {'role': 'system', 'content': systemInstruction},
-      {'role': 'user', 'content': userContent},
+        <String, dynamic>{'role': 'system', 'content': systemInstruction},
+      <String, dynamic>{'role': 'user', 'content': userContent},
     ];
 
-    final body = <String, dynamic>{
+    final Map<String, dynamic> body = <String, dynamic>{
       'model': GroqConfig.model,
       'messages': messages,
       'temperature': 0.35,
@@ -47,23 +52,23 @@ class GeminiService {
       'citation_options': 'disabled',
     };
     if (webSearch) {
-      body['tools'] = [
-        {'type': 'browser_search'},
+      body['tools'] = <Map<String, String>>[
+        <String, String>{'type': 'browser_search'},
       ];
     }
 
-    for (var attempt = 0; attempt < keys.length; attempt++) {
-      final i = (_cursor + attempt) % keys.length;
-      final key = keys[i];
-      final blockedUntil = _rateLimitedUntil[key];
+    for (int attempt = 0; attempt < keys.length; attempt++) {
+      final int i = (_cursor + attempt) % keys.length;
+      final String key = keys[i];
+      final DateTime? blockedUntil = _rateLimitedUntil[key];
       if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
         continue;
       }
 
       try {
-        final response = await http.post(
+        final http.Response response = await http.post(
           Uri.parse(GroqConfig.endpoint),
-          headers: {
+          headers: <String, String>{
             'Authorization': 'Bearer $key',
             'Content-Type': 'application/json',
           },
@@ -72,22 +77,31 @@ class GeminiService {
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           _rateLimitedUntil.remove(key);
-          _cursor = (i + 1) % keys.length;
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final choices = data['choices'];
-          if (choices is! List || choices.isEmpty) {
-            throw GeminiException('Groq returned no response.');
+          _cursor = (i + 1).toInt() % keys.length;
+          final dynamic decoded = jsonDecode(response.body);
+          if (decoded is! Map<String, dynamic>) {
+            continue;
           }
-          final first = choices.first;
-          if (first is! Map) throw GeminiException('Groq returned an invalid response.');
-          final message = first['message'];
-          if (message is! Map) throw GeminiException('Groq returned an empty response.');
-          final text = message['content']?.toString().trim() ?? '';
-          if (text.isEmpty) throw GeminiException('Groq returned no text.');
+          final dynamic choices = decoded['choices'];
+          if (choices is! List || choices.isEmpty) {
+            continue;
+          }
+          final dynamic first = choices.first;
+          if (first is! Map) {
+            continue;
+          }
+          final dynamic message = first['message'];
+          if (message is! Map) {
+            continue;
+          }
+          final String text = message['content']?.toString().trim() ?? '';
+          if (text.isEmpty) {
+            continue;
+          }
           return text;
         }
 
-        final isQuotaOrTransient =
+        final bool isQuotaOrTransient =
             response.statusCode == 429 ||
             response.statusCode == 403 ||
             response.statusCode >= 500;
@@ -100,14 +114,17 @@ class GeminiService {
         }
         break;
       } catch (e) {
-        if (e is GeminiException) rethrow;
+        if (e is GeminiException) {
+          rethrow;
+        }
         continue;
       }
     }
 
-    final allCooling = keys.every((key) {
-      final until = _rateLimitedUntil[key];
-      return until != null && until.isAfter(DateTime.now());
+    final DateTime now = DateTime.now();
+    final bool allCooling = keys.every((String key) {
+      final DateTime? until = _rateLimitedUntil[key];
+      return until != null && until.isAfter(now);
     });
     if (allCooling) {
       throw GeminiException(
@@ -120,10 +137,10 @@ class GeminiService {
   }
 
   String _sourceText(List<NotebookSource> sources) {
-    final buffer = StringBuffer();
-    for (final source in sources) {
+    final StringBuffer buffer = StringBuffer();
+    for (final NotebookSource source in sources) {
       buffer.writeln('\n--- SOURCE: "${source.title}" ---');
-      final text = source.textContent?.trim();
+      final String? text = source.textContent?.trim();
       if (text != null && text.isNotEmpty) {
         buffer.writeln(text);
       } else {
@@ -135,11 +152,11 @@ class GeminiService {
 
   Future<String> askGeneral({
     required String prompt,
-    List<ChatMessage> history = const [],
+    List<ChatMessage> history = const <ChatMessage>[],
     bool webSearch = true,
   }) {
-    final historyText = history
-        .map((m) => '${m.isUser ? "User" : "Assistant"}: ${m.text}')
+    final String historyText = history
+        .map((ChatMessage m) => '${m.isUser ? "User" : "Assistant"}: ${m.text}')
         .join('\n');
     return _generate(
       userContent:
@@ -155,8 +172,8 @@ class GeminiService {
     required List<ChatMessage> history,
     required String question,
   }) {
-    final historyText = history
-        .map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}')
+    final String historyText = history
+        .map((ChatMessage m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}')
         .join('\n');
     return _generate(
       userContent:
@@ -168,10 +185,10 @@ class GeminiService {
 
   Future<String> askNotebookGeneral({
     required String question,
-    List<ChatMessage> history = const [],
+    List<ChatMessage> history = const <ChatMessage>[],
   }) {
-    final historyText = history
-        .map((m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}')
+    final String historyText = history
+        .map((ChatMessage m) => '${m.isUser ? "Student" : "Assistant"}: ${m.text}')
         .join('\n');
     return _generate(
       userContent:
@@ -188,7 +205,7 @@ class GeminiService {
       );
 
   Future<List<String>> suggestQuestions(List<NotebookSource> sources) async {
-    final result = await _generate(
+    final String result = await _generate(
       userContent:
           '${_sourceText(sources)}\nList exactly 4 short questions under 12 words each. Return ONLY the 4 questions, one per line.',
       systemInstruction:
@@ -196,8 +213,8 @@ class GeminiService {
     );
     return result
         .split('\n')
-        .map((line) => line.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), ''))
-        .where((line) => line.isNotEmpty)
+        .map((String line) => line.trim().replaceFirst(RegExp(r'^[-•\d.\)]+\s*'), ''))
+        .where((String line) => line.isNotEmpty)
         .take(4)
         .toList();
   }
@@ -206,7 +223,7 @@ class GeminiService {
     List<NotebookSource> sources, {
     int count = 8,
   }) async {
-    final result = await _generate(
+    final String result = await _generate(
       userContent:
           '${_sourceText(sources)}\nCreate $count multiple-choice questions as JSON. Each object must contain question, options (exactly 4 strings), answer (0-3), hint, and explanation.',
       systemInstruction:
@@ -226,23 +243,23 @@ class GeminiService {
     if (decoded is! List) {
       throw GeminiException('Groq returned an invalid quiz format.');
     }
-    return decoded.map<NotebookQuizQuestion>((item) {
+    return decoded.map<NotebookQuizQuestion>((dynamic item) {
       if (item is! Map) {
         throw GeminiException('Groq returned an invalid quiz question.');
       }
-      final map = Map<String, dynamic>.from(item);
-      final options = map['options'];
+      final Map<String, dynamic> map = Map<String, dynamic>.from(item);
+      final dynamic options = map['options'];
       if (options is! List || options.length != 4) {
         throw GeminiException('Groq returned a quiz question without exactly 4 options.');
       }
-      final answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
+      final int answer = int.tryParse(map['answer']?.toString() ?? '') ?? -1;
       if (answer < 0 || answer > 3) {
         throw GeminiException('Groq returned an invalid correct answer index.');
       }
       return NotebookQuizQuestion(
         question: map['question']?.toString() ?? '',
         options: options
-            .map<QuizOption>((value) => QuizOption(
+            .map<QuizOption>((dynamic value) => QuizOption(
                   text: value.toString(),
                   why: map['explanation']?.toString() ?? '',
                 ))
