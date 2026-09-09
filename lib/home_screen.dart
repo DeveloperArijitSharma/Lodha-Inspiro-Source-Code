@@ -230,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : ListView.builder(padding: EdgeInsets.only(bottom: size.height * 0.22, left: padding, right: padding), itemCount: filteredChats.length, itemBuilder: (context, index) { final chat = filteredChats[index]; return GestureDetector(onLongPress: () => _deleteChat(chat['id'], chat['chat_name']), child: _buildChatTile(chat['id'], chat['chat_name'], chat['chat_type'], isDark)); }),
           ),
         ]),
-        Positioned(right: padding, bottom: size.height * 0.22, child: GestureDetector(onTap: () { if (hapticsNotifier.value) HapticFeedback.lightImpact(); _showAddChatDialog(isDark, _accentBlue); }, child: ClipRRect(borderRadius: BorderRadius.circular(30), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: Container(height: 60, width: 60, decoration: BoxDecoration(color: _accentBlue.withOpacity(0.85), shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5), boxShadow: [BoxShadow(color: _accentBlue.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))]), child: const Icon(Icons.add_rounded, color: Colors.white, size: 32))))),
+        Positioned(right: padding, bottom: size.height * 0.22, child: GestureDetector(onTap: () { if (hapticsNotifier.value) HapticFeedback.lightImpact(); _showAddChatDialog(isDark, _accentBlue); }, child: ClipRRect(borderRadius: BorderRadius.circular(30), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: Container(height: 60, width: 60, decoration: BoxDecoration(color: _accentBlue.withOpacity(0.85), shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5), boxShadow: [BoxShadow(color: _accentBlue.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))]), child: const Icon(Icons.add_rounded, color: Colors.white, size: 32))))))),
       ],
     );
   }
@@ -254,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SingleChildScrollView(key: const ValueKey(3), padding: EdgeInsets.fromLTRB(padding, size.height * 0.02, padding, size.height * 0.22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildHeader('Settings', textColor),
       SizedBox(height: size.height * 0.03),
-      Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')]))),
+      Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')]),
       SizedBox(height: size.height * 0.025),
       Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: _accentBlue), const SizedBox(width: 12), Text('Light Mode', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Google Sans Flex'))]), Switch.adaptive(value: !isDark, activeColor: _accentBlue, onChanged: (value) { if (hapticsNotifier.value) HapticFeedback.selectionClick(); themeNotifier.value = value ? ThemeMode.light : ThemeMode.dark; })])),
       SizedBox(height: size.height * 0.025),
@@ -278,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildSidebarItem(icon: Icons.settings_outlined, title: 'Settings', index: 4, isDark: isDark),
       if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[SizedBox(height: size.height * 0.01), ListTile(leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen())); })],
       const Spacer(), ListTile(leading: const Icon(Icons.logout_rounded, color: Colors.redAccent), title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), onTap: _signOut),
-    ]))))));
+    ])))))));
   }
 
   Widget _buildSidebarItem({required IconData icon, required String title, required int index, required bool isDark}) {
@@ -336,8 +336,55 @@ class _GlassDialogBase extends StatelessWidget {
   final VoidCallback onAction;
   final bool isLoading;
   const _GlassDialogBase({required this.isDark, required this.accentColor, required this.title, required this.icon, required this.content, required this.actionText, required this.onAction, this.isLoading = false});
+
   @override
   Widget build(BuildContext context) {
-    return Center(child: Material(color: Colors.transparent, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: ClipRRect(borderRadius: BorderRadius.circular(32), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25), child: Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.6) : Colors.white.withOpacity(0.7), borderRadius: BorderRadius.circular(32), border: Border.all(color: isDark ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.9), width: 1.5)), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accentColor.withOpacity(0.2), shape: BoxShape.circle), child: Icon(icon, color: accentColor, size: 32)), const SizedBox(height: 16), Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 20), content, const SizedBox(height: 24), Row(children: [Expanded(child: TextButton(onPressed: () => Navigator.pop(context), style: TextButton.styleFrom(foregroundColor: isDark ? Colors.white70 : Colors.black54), child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')))), const SizedBox(width: 12), Expanded(flex: 2, child: ElevatedButton(onPressed: isLoading ? null : onAction, style: ElevatedButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0), child: isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(actionText, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex'))))])]))))))));
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.6) : Colors.white.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.9), width: 1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accentColor.withOpacity(0.2), shape: BoxShape.circle), child: Icon(icon, color: accentColor, size: 32)),
+                    const SizedBox(height: 16),
+                    Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+                    const SizedBox(height: 20),
+                    content,
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), style: TextButton.styleFrom(foregroundColor: isDark ? Colors.white70 : Colors.black54), child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : onAction,
+                            style: ElevatedButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0),
+                            child: isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(actionText, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
