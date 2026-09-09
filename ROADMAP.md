@@ -6,7 +6,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 - [x] Create multiple notebooks
 - [x] Add pasted text, TXT/MD and PDF sources
-- [x] Source-grounded Gemini Q&A
+- [x] Source-grounded Groq Q&A
 - [x] Suggested study questions
 - [x] Notebook summaries
 - [x] Audio Overview script + device narration
@@ -17,6 +17,10 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Voice-to-text input in notebook AI chat
 - [x] AI-generated classwork from Notebook Studio
 - [x] Open and complete generated classwork in-app
+- [x] PDF text extraction before Groq grounding
+- [x] Relevant-source retrieval for Notebook Q&A to reduce repeated token usage
+- [x] Bounded source context for summaries, questions, quizzes and audio scripts
+- [x] Bounded conversation history to reduce repeated context tokens
 - [ ] Click a citation to jump to the exact source passage
 - [ ] Better source previews and source management
 - [ ] Streaming AI responses
@@ -87,7 +91,7 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 - [x] Hardened database function search paths
 - [x] Chat participant isolation policies
 - [x] Private chat attachment storage policies
-- [ ] Move Gemini requests behind a Supabase Edge Function
+- [ ] Move Groq requests behind a Supabase Edge Function
 - [ ] Keep API secrets out of the Flutter client
 - [ ] Move large source files to Supabase Storage
 - [ ] Audit RLS policies for chats, classroom data and future features
@@ -113,17 +117,52 @@ Lodha Inspiro is being developed as a student super-app prototype. The project i
 
 ## Current Build Order
 
-1. Classroom UI and integration
-2. Advanced messaging UI and integration
-3. Notebook 2.0 citations and source UX
-4. Notifications/realtime
-5. Backend security hardening
-6. UI polish, tests and release readiness
+1. Smart Groq token-efficiency and Notebook source retrieval
+2. Classroom UI and integration
+3. Advanced messaging UI and integration
+4. Notebook 2.0 citations and source UX
+5. Notifications/realtime
+6. Backend security hardening
+7. UI polish, tests and release readiness
+
+## Groq Token-Efficiency Plan
+
+The app uses Groq as the single AI provider. No FreeLLMAPI or multi-provider gateway is planned in this roadmap.
+
+### Source handling
+
+- [x] Convert PDFs to hidden text before AI use
+- [x] Never send PDF base64/binary to Groq
+- [x] Split large source text into manageable chunks in memory
+- [x] Retrieve only the most relevant chunks for source-grounded Q&A
+- [x] Cap total source context sent to Groq for every source-based operation
+- [x] Keep source titles while trimming unnecessary repeated text
+
+### Context handling
+
+- [x] Limit Notebook conversation history to recent relevant context
+- [x] Avoid resending unlimited chat history
+- [x] Use smaller output limits for short operations such as suggested questions
+- [x] Keep quiz/audio/summary prompts bounded instead of blindly sending full sources
+- [ ] Add token-budget telemetry for development/debug builds
+- [ ] Add smarter semantic retrieval when a local embedding/index layer is introduced
+
+### Reliability
+
+- [x] Rotate through configured Groq keys
+- [x] Skip temporarily rate-limited keys
+- [x] Fail over silently to the next configured key
+- [ ] Add explicit daily usage budgeting/alerts
+
+### Design rule
+
+**The source stays complete in storage, but Groq only receives the smallest useful context needed for the current task.** This is intended to reduce daily token consumption without changing the Notebook UI or removing source features.
 
 ### Batch history
 
 - **Batch 1:** messaging reactions, reply/quote UI, edit/delete actions, realtime message updates, and new-message notifications were wired into the Flutter chat experience.
 - **Batch 2:** Android note downloads and reusable Liquid Glass building blocks were added, followed by Home Inspiro AI, optional web search, announcements integration, voice-to-text composer support, private chat attachment handling, demo classwork, and AI-generated classwork in Notebook Studio.
 - **Batch 2 also:** notebook AI chat now has a distinct Ask AI + Web mode, and generated classwork can be opened and completed inside the app.
+- **Groq token-efficiency update:** PDF text remains stored as source knowledge, while Notebook AI now uses bounded/relevant context instead of repeatedly sending entire large sources.
 
 This roadmap is a living plan. Features can be changed, expanded or removed as the prototype grows.
