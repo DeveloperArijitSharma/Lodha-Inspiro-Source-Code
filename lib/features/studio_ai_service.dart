@@ -6,23 +6,31 @@ import '../gemini/gemini_service.dart';
 
 class StudioAiService {
   static int _cursor = 0;
+  static final Map<String, DateTime> _rateLimitedUntil = {};
 
   Future<String> generate(String prompt) async {
     final keys = AiKeyPool.availableGeminiKeys;
-    String? lastError;
     if (keys.isEmpty) {
       throw GeminiException(
         'Studio AI has no Gemini key. Configure GEMINI_API_KEY_1 through GEMINI_API_KEY_10.',
       );
     }
 
+    var attemptedKey = false;
     for (var attempt = 0; attempt < keys.length; attempt++) {
       final i = (_cursor + attempt) % keys.length;
+      final key = keys[i];
+      final blockedUntil = _rateLimitedUntil[key];
+      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        continue;
+      }
+      attemptedKey = true;
+
       try {
         final r = await http.post(
           Uri.parse(GroqConfig.endpoint),
           headers: {
-            'x-goog-api-key': keys[i],
+            'x-goog-api-key': key,
             'Content-Type': 'application/json',
           },
           body: jsonEncode({
@@ -43,7 +51,9 @@ class StudioAiService {
             },
           }),
         );
+
         if (r.statusCode >= 200 && r.statusCode < 300) {
+          _rateLimitedUntil.remove(key);
           _cursor = (i + 1) % keys.length;
           final d = jsonDecode(r.body) as Map<String, dynamic>;
           final candidates = d['candidates'];
@@ -60,22 +70,28 @@ class StudioAiService {
               .where((s) => s.isNotEmpty)
               .join();
           if (text.isNotEmpty) return text;
-        } else if (r.statusCode == 401 ||
-            r.statusCode == 403 ||
-            r.statusCode == 429 ||
-            r.statusCode >= 500) {
-          lastError = 'Gemini API error (${r.statusCode}).';
-        } else {
-          lastError = 'Gemini API error (${r.statusCode}).';
-          break;
+          continue;
         }
-      } catch (e) {
-        lastError = e.toString();
+
+        if (r.statusCode == 429 || r.statusCode == 403 || r.statusCode >= 500) {
+          // Keep quota/rate-limit details out of the student UI and silently
+          // retry the exact same request with another configured key.
+          if (r.statusCode == 429 || r.statusCode == 403) {
+            _rateLimitedUntil[key] = DateTime.now().add(const Duration(minutes: 2));
+          }
+          continue;
+        }
+
+        break;
+      } catch (_) {
+        // A failed key must not prevent another configured key from answering.
+        continue;
       }
     }
 
-    throw GeminiException(
-      lastError ?? 'All configured Gemini keys failed for Studio AI.',
-    );
+    if (!attemptedKey) {
+      throw GeminiException('Studio AI is temporarily busy. Please try again.');
+    }
+    throw GeminiException('Studio AI is temporarily unavailable. Please try again.');
   }
 }
