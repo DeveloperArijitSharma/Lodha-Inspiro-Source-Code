@@ -26,6 +26,7 @@ dependencies:
   uuid: ^4.5.1
   speech_to_text: ^7.4.0
   syncfusion_flutter_pdf: ^31.1.19
+  syncfusion_flutter_pdfviewer: ^31.1.19
 
   # App update + Studio exports
   package_info_plus: ^8.3.1
