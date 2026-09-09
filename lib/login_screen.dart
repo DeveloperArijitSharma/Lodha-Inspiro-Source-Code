@@ -1,356 +1,107 @@
 import 'dart:ui';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home_screen.dart';
+
+import 'app_shell_screen.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
-
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
 class _AuthGateState extends State<AuthGate> {
   final _supabase = Supabase.instance.client;
-  bool _isLoading = false;
-  bool _isSignUp = false;
-
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  // 🚀 GLOBAL LIGHT BLUE ACCENT COLOR
-  final Color _accentBlue = const Color(0xFF32C5FF);
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _loading = false;
+  bool _signup = false;
 
   @override
   void initState() {
     super.initState();
-    // Setup auth state listener to automatically navigate to Home
     _supabase.auth.onAuthStateChange.listen((data) {
       if (data.session != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AppShellScreen()));
       }
     });
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
-  Future<void> _submitAuth() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
+  Future<void> _submit() async {
+    final email = _email.text.trim();
+    final password = _password.text.trim();
     if (email.isEmpty || password.isEmpty) {
-      _showError('Please fill in all fields');
+      _toast('Please fill in both fields.', error: true);
       return;
     }
-
-    setState(() => _isLoading = true);
+    setState(() => _loading = true);
     HapticFeedback.mediumImpact();
-
     try {
-      if (_isSignUp) {
-        await _supabase.auth.signUp(
-          email: email,
-          password: password,
-          data: {
-            'username': email.split('@')[0]
-          }, // Default username from email
-        );
-        _showSuccess('Account created! You can now sign in.');
-        setState(() => _isSignUp = false);
+      if (_signup) {
+        await _supabase.auth.signUp(email: email, password: password, data: {'username': email.split('@').first});
+        _toast('Account created. You can sign in now.');
+        setState(() => _signup = false);
       } else {
-        await _supabase.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
-        // Successful login will trigger the onAuthStateChange listener
+        await _supabase.auth.signInWithPassword(email: email, password: password);
       }
     } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError('An unexpected error occurred');
+      _toast(e.message, error: true);
+    } catch (_) {
+      _toast('Something went wrong. Please try again.', error: true);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: _accentBlue,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _toast(String text, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating, backgroundColor: error ? Colors.redAccent : const Color(0xFF4B8DFF)));
   }
 
   @override
   Widget build(BuildContext context) {
-    // If user is already logged in, show a blank loading screen while redirecting
-    if (_supabase.auth.currentSession != null) {
-      return Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: _accentBlue),
-        ),
-      );
-    }
-
-    final size = MediaQuery.of(context).size;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          // ====================================================
-          // 🎨 BACKGROUND ORBS (Makes the glass effect pop)
-          // ====================================================
-          Positioned(
-            top: size.height * 0.1,
-            left: -size.width * 0.2,
-            child: Container(
-              width: size.width * 0.8,
-              height: size.width * 0.8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _accentBlue.withOpacity(isDark ? 0.4 : 0.3),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -size.height * 0.05,
-            right: -size.width * 0.3,
-            child: Container(
-              width: size.width * 0.9,
-              height: size.width * 0.9,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFD3B4FF)
-                    .withOpacity(isDark ? 0.3 : 0.4), // Soft purple contrast
-              ),
-            ),
-          ),
-          // Heavy blur over the background orbs
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-            child: Container(color: Colors.transparent),
-          ),
-
-          // ====================================================
-          // 🧊 LIQUID GLASS LOGIN CARD
-          // ====================================================
-          Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.black.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(40),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.15)
-                            : Colors.white.withOpacity(0.8),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // App Logo / Icon
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _accentBlue.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.auto_awesome_mosaic_rounded,
-                              color: _accentBlue, size: 48),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // App Title
-                        Text(
-                          'Lodha Inspiro',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Google Sans Flex',
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isSignUp
-                              ? 'Create your student account'
-                              : 'Welcome back, student',
-                          style: TextStyle(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                            fontSize: 15,
-                            fontFamily: 'Google Sans Flex',
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Glass Text Fields
-                        _buildGlassTextField(
-                          controller: _emailController,
-                          hintText: 'Email Address',
-                          icon: Icons.email_outlined,
-                          isDark: isDark,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildGlassTextField(
-                          controller: _passwordController,
-                          hintText: 'Password',
-                          icon: Icons.lock_outline_rounded,
-                          isDark: isDark,
-                          obscureText: true,
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Submit Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _submitAuth,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _accentBlue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              elevation: 0,
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white, strokeWidth: 2),
-                                  )
-                                : Text(
-                                    _isSignUp ? 'Sign Up' : 'Sign In',
-                                    style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Google Sans Flex'),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Toggle Mode Button
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() => _isSignUp = !_isSignUp);
-                          },
-                          child: RichText(
-                            text: TextSpan(
-                              text: _isSignUp
-                                  ? 'Already have an account? '
-                                  : 'Don\'t have an account? ',
-                              style: TextStyle(
-                                  color:
-                                      isDark ? Colors.white70 : Colors.black54,
-                                  fontFamily: 'Google Sans Flex'),
-                              children: [
-                                TextSpan(
-                                  text: _isSignUp ? 'Sign In' : 'Sign Up',
-                                  style: TextStyle(
-                                      color: _accentBlue,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    if (_supabase.auth.currentSession != null) return const AppShellScreen();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = dark ? Colors.white : const Color(0xFF172033);
+    return Scaffold(backgroundColor: dark ? const Color(0xFF080C14) : const Color(0xFFF2F6FB), body: Stack(children: [
+      Positioned(top: -130, left: -100, child: _orb(340, const Color(0xFF4B8DFF))),
+      Positioned(bottom: -150, right: -120, child: _orb(360, const Color(0xFF9A7BFF))),
+      Positioned.fill(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 65, sigmaY: 65), child: Container(color: Colors.transparent))),
+      SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: ClipRRect(borderRadius: BorderRadius.circular(38), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28), child: Container(padding: const EdgeInsets.fromLTRB(24, 28, 24, 24), decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.68), borderRadius: BorderRadius.circular(38), border: Border.all(color: dark ? Colors.white.withOpacity(.13) : Colors.white, width: 1.3)), child: Column(children: [
+        Container(width: 76, height: 76, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF4B8DFF), Color(0xFF9A7BFF)]), boxShadow: [BoxShadow(color: const Color(0xFF4B8DFF).withOpacity(.25), blurRadius: 30)]), child: const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 34)),
+        const SizedBox(height: 18),
+        Text('Lodha Inspiro', style: TextStyle(color: foreground, fontSize: 30, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        Text(_signup ? 'Create your student space.' : 'Your fluid study space, ready.', style: TextStyle(color: foreground.withOpacity(.58), fontSize: 14)),
+        const SizedBox(height: 26),
+        _Field(controller: _email, placeholder: 'Email', icon: CupertinoIcons.mail),
+        const SizedBox(height: 12),
+        _Field(controller: _password, placeholder: 'Password', icon: CupertinoIcons.lock, obscure: true),
+        const SizedBox(height: 18),
+        SizedBox(width: double.infinity, child: CupertinoButton.filled(onPressed: _loading ? null : _submit, borderRadius: BorderRadius.circular(22), padding: const EdgeInsets.symmetric(vertical: 15), child: _loading ? const CupertinoActivityIndicator(color: Colors.white) : Text(_signup ? 'Create account' : 'Continue'))),
+        const SizedBox(height: 8),
+        CupertinoButton(onPressed: _loading ? null : () => setState(() => _signup = !_signup), child: Text(_signup ? 'Already have an account? Sign in' : 'New here? Create an account')),
+      ])))))));
   }
 
-  // ====================================================
-  // 🧊 HELPER: GLASS TEXT FIELD
-  // ====================================================
-  Widget _buildGlassTextField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    required bool isDark,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.black.withOpacity(0.3)
-            : Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.white70),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontFamily: 'Google Sans Flex'),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
-          prefixIcon:
-              Icon(icon, color: isDark ? Colors.white70 : Colors.black54),
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        ),
-      ),
-    );
-  }
+  Widget _orb(double size, Color color) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(.18), boxShadow: [BoxShadow(color: color.withOpacity(.18), blurRadius: 90, spreadRadius: 25)]));
+}
+
+class _Field extends StatelessWidget {
+  final TextEditingController controller;
+  final String placeholder;
+  final IconData icon;
+  final bool obscure;
+  const _Field({required this.controller, required this.placeholder, required this.icon, this.obscure = false});
+  @override
+  Widget build(BuildContext context) { final dark = Theme.of(context).brightness == Brightness.dark; return ClipRRect(borderRadius: BorderRadius.circular(20), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Container(decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.72), borderRadius: BorderRadius.circular(20), border: Border.all(color: dark ? Colors.white12 : Colors.white)), child: TextField(controller: controller, obscureText: obscure, decoration: InputDecoration(prefixIcon: Icon(icon), hintText: placeholder, border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 16))))); }
 }
