@@ -1,8 +1,9 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import 'file_ai_chat_screen.dart';
 import 'file_editor_screen.dart';
@@ -14,64 +15,189 @@ class FileManagerScreen extends StatefulWidget {
   State<FileManagerScreen> createState() => _FileManagerScreenState();
 }
 
+enum _SortMode { name, type, size, newest, oldest }
+
 class _FileManagerScreenState extends State<FileManagerScreen> {
   final _service = FileManagerService.instance;
   final _search = TextEditingController();
   List<Map<String, dynamic>> _files = [];
-  String _category = 'all';
+  List<Map<String, dynamic>> _folders = [];
+  String? _folderId;
+  String _folderTitle = 'Personal';
+  _SortMode _sort = _SortMode.newest;
   bool _loading = true;
   bool _organizing = false;
 
-  static const _categories = <String, String>{
-    'all': 'All Files', 'school_work': 'School Work', 'ai_work': 'AI Work',
-    'notebook_notes': 'Notebook Notes', 'personal': 'Personal',
-    'documents': 'Documents', 'images': 'Images',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() => setState(() {}));
+    _refresh();
+  }
 
   @override
-  void initState() { super.initState(); _search.addListener(() => setState(() {})); _refresh(); }
-  @override
-  void dispose() { _search.dispose(); super.dispose(); }
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() async {
-    setState(() => _loading = true);
-    try { final files = await _service.listFiles(); if (mounted) setState(() => _files = files); }
-    catch (_) { if (mounted) _snack('Could not load File Manager.', error: true); }
-    finally { if (mounted) setState(() => _loading = false); }
-  }
-
-  Future<void> _addFiles() async {
+    if (mounted) setState(() => _loading = true);
     try {
-      final result = await FilePicker.platform.pickFiles(allowMultiple: true, withData: true, type: FileType.custom, allowedExtensions: FileManagerService.supportedExtensions.toList());
-      if (result == null) return;
-      final user = _service.currentUserId;
-      if (user == null) throw StateError('Please sign in again.');
-      for (final file in result.files) { final bytes = file.bytes; if (bytes != null && bytes.isNotEmpty) await _service.uploadBytes(user, file.name, bytes); }
-      await _refresh(); if (mounted) _snack('Files added to File Manager.');
-    } catch (e) { if (mounted) _snack('Could not add files: $e', error: true); }
-  }
-
-  Future<void> _organize() async {
-    if (_organizing) return;
-    setState(() => _organizing = true);
-    try { await _service.analyzeAndOrganize(); await _refresh(); if (mounted) _snack('Files analyzed and organized. ✨'); }
-    catch (_) { if (mounted) _snack('Could not organize files.', error: true); }
-    finally { if (mounted) setState(() => _organizing = false); }
-  }
-
-  List<Map<String, dynamic>> get _visible {
-    final q = _search.text.trim().toLowerCase();
-    return _files.where((file) => (_category == 'all' || file['category'] == _category) && (q.isEmpty || file['name'].toString().toLowerCase().contains(q))).toList();
-  }
-
-  void _snack(String text, {bool error = false}) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: error ? Colors.redAccent : const Color(0xFF32C5FF), content: Text(text)));
-
-  Future<void> _open(Map<String, dynamic> file) async {
-    if (file['ai_supported'] == true) {
-      final useAi = await showModalBottomSheet<bool>(context: context, backgroundColor: Colors.transparent, builder: (_) => _FileActionSheet(file: file));
-      if (useAi == true && mounted) { await Navigator.push(context, MaterialPageRoute(builder: (_) => FileAiChatScreen(file: file))); return; }
+      final result = await Future.wait([
+        _service.listFiles(folderId: _folderId),
+        _service.listFolders(parentId: _folderId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _files = result[0];
+        _folders = result[1];
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _toast('Could not load this folder.', error: true);
+      }
     }
-    final ext = file['extension'].toString();
+  }
+
+  List<Map<String, dynamic>> get _visibleFiles {
+    final q = _search.text.trim().toLowerCase();
+    final files = _files.where((file) {
+      if (q.isEmpty) return true;
+      return file['name'].toString().toLowerCase().contains(q) ||
+          file['extension'].toString().toLowerCase().contains(q) ||
+          file['category'].toString().toLowerCase().contains(q);
+    }).toList();
+    files.sort((a, b) {
+      switch (_sort) {
+        case _SortMode.name:
+          return a['name'].toString().toLowerCase().compareTo(b['name'].toString().toLowerCase());
+        case _SortMode.type:
+          return a['extension'].toString().compareTo(b['extension'].toString());
+        case _SortMode.size:
+          return ((b['size_bytes'] as num?) ?? 0).compareTo((a['size_bytes'] as num?) ?? 0);
+        case _SortMode.newest:
+          return b['created_at'].toString().compareTo(a['created_at'].toString());
+        case _SortMode.oldest:
+          return a['created_at'].toString().compareTo(b['created_at'].toString());
+      }
+    });
+    return files;
+  }
+
+  Future<void> _createFolder() async {
+    final controller = TextEditingController();
+    final name = await showCupertinoDialog<String>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('New folder'),
+        content: Padding(padding: const EdgeInsets.only(top: 14), child: CupertinoTextField(controller: controller, autofocus: true, placeholder: 'Folder name')),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('Create')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.trim().isEmpty) return;
+    try {
+      await _service.createFolder(name, parentId: _folderId);
+      await _refresh();
+    } catch (e) {
+      _toast('Could not create folder: $e', error: true);
+    }
+  }
+
+  Future<void> _renameFolder(Map<String, dynamic> folder) async {
+    final controller = TextEditingController(text: folder['name'].toString());
+    final name = await showCupertinoDialog<String>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Rename folder'),
+        content: Padding(padding: const EdgeInsets.only(top: 14), child: CupertinoTextField(controller: controller, autofocus: true)),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('Rename')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.trim().isEmpty) return;
+    await _service.renameFolder(folder, name);
+    await _refresh();
+  }
+
+  Future<void> _deleteFolder(Map<String, dynamic> folder) async {
+    final ok = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Delete folder?'),
+        content: const Text('The folder and everything inside it will be removed.'),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          CupertinoDialogAction(isDestructiveAction: true, onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _service.deleteFolder(folder);
+      await _refresh();
+    } catch (_) {
+      _toast('Could not delete folder.', error: true);
+    }
+  }
+
+  Future<void> _import() async {
+    final choice = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: const Text('Add to File Manager'),
+        message: const Text('The system picker can show Drive, OneDrive and other installed file providers.'),
+        actions: [
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, 'files'), child: const Text('Files / Drive / OneDrive / Other apps')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, 'gallery'), child: const Text('Gallery / Images')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, 'folder'), child: const Text('New folder')),
+        ],
+        cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext), child: const Text('Cancel')),
+      ),
+    );
+    try {
+      if (choice == 'files') {
+        await _service.importFromDevice(folderId: _folderId);
+        await _refresh();
+      } else if (choice == 'gallery') {
+        await _service.importImagesFromGallery(folderId: _folderId);
+        await _refresh();
+      } else if (choice == 'folder') {
+        await _createFolder();
+      }
+    } catch (e) {
+      _toast('Import failed: $e', error: true);
+    }
+  }
+
+  Future<void> _openFolder(Map<String, dynamic> folder) async {
+    setState(() {
+      _folderId = folder['id'].toString();
+      _folderTitle = folder['name'].toString();
+    });
+    await _refresh();
+  }
+
+  Future<void> _goRoot() async {
+    if (_folderId == null) return;
+    setState(() {
+      _folderId = null;
+      _folderTitle = 'Personal';
+    });
+    await _refresh();
+  }
+
+  Future<void> _openFile(Map<String, dynamic> file) async {
+    final ext = file['extension'].toString().toLowerCase();
     if (ext == 'txt' || ext == 'md') {
       final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => FileEditorScreen(file: file)));
       if (changed == true) await _refresh();
@@ -79,185 +205,246 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
     try {
       final bytes = await _service.download(file);
-      if (mounted) await showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => _PreviewSheet(file: file, bytes: bytes));
-    } catch (_) { if (mounted) _snack('Could not open this file.', error: true); }
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => FilePreviewScreen(file: file, bytes: bytes)));
+    } catch (_) {
+      _toast('Could not open this file.', error: true);
+    }
   }
 
-  Future<void> _rename(Map<String, dynamic> file) async {
+  Future<void> _moveFile(Map<String, dynamic> file) async {
+    final folders = await _service.listFolders(parentId: _folderId);
+    final target = await showCupertinoModalPopup<String?>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: const Text('Move file'),
+        actions: [
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, '__root__'), child: const Text('Personal root')),
+          ...folders.map((folder) => CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, folder['id'].toString()), child: Text(folder['name'].toString()))),
+        ],
+        cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext), child: const Text('Cancel')),
+      ),
+    );
+    if (target == null) return;
+    await _service.moveFile(file, folderId: target == '__root__' ? null : target);
+    await _refresh();
+  }
+
+  Future<void> _renameFile(Map<String, dynamic> file) async {
     final controller = TextEditingController(text: file['name'].toString());
-    final name = await showDialog<String>(context: context, builder: (_) => AlertDialog(title: const Text('Rename file', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)), content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'File name')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Rename'))]));
+    final name = await showCupertinoDialog<String>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Rename file'),
+        content: Padding(padding: const EdgeInsets.only(top: 14), child: CupertinoTextField(controller: controller, autofocus: true)),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('Rename')),
+        ],
+      ),
+    );
+    controller.dispose();
     if (name == null || name.trim().isEmpty || name.trim() == file['name']) return;
-    try { await _service.rename(file, name); await _refresh(); if (mounted) _snack('File renamed.'); }
-    catch (e) { if (mounted) _snack('Could not rename file: $e', error: true); }
+    await _service.rename(file, name);
+    await _refresh();
   }
 
-  Future<void> _delete(Map<String, dynamic> file) async {
-    final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Delete file?', style: TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.bold)), content: Text('Remove “${file['name']}” from File Manager?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.redAccent), child: const Text('Delete'))]));
-    if (yes != true) return;
-    try { await _service.delete(file); await _refresh(); if (mounted) _snack('File deleted.'); }
-    catch (_) { if (mounted) _snack('Could not delete file.', error: true); }
+  Future<void> _deleteFile(Map<String, dynamic> file) async {
+    final ok = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Delete file?'),
+        content: Text(file['name'].toString()),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          CupertinoDialogAction(isDestructiveAction: true, onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _service.delete(file);
+    await _refresh();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final text = dark ? Colors.white : const Color(0xFF172033);
-    final bg = dark ? const Color(0xFF0D1118) : const Color(0xFFF3F7FA);
-    return Scaffold(backgroundColor: bg, body: SafeArea(child: Stack(children: [
-      ListView(padding: const EdgeInsets.fromLTRB(18, 18, 18, 100), children: [
-        Row(children: [IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.arrow_back_rounded, color: text)), const SizedBox(width: 3), Expanded(child: Text('File Manager', style: TextStyle(color: text, fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex'))), IconButton(onPressed: _organizing ? null : _organize, tooltip: 'Analyze & organize', icon: _organizing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.auto_awesome_rounded, color: Color(0xFF32C5FF)))]),
-        Text('School files, AI work, notebook notes and personal files in one place.', style: TextStyle(color: dark ? Colors.white60 : Colors.black54, fontFamily: 'Google Sans Flex')),
-        const SizedBox(height: 16), _SearchBox(controller: _search, dark: dark), const SizedBox(height: 12),
-        SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _categories.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) { final e = _categories.entries.elementAt(i); return ChoiceChip(selected: _category == e.key, label: Text(e.value, style: const TextStyle(fontFamily: 'Google Sans Flex', fontWeight: FontWeight.w600)), onSelected: (_) => setState(() => _category = e.key), selectedColor: const Color(0xFF32C5FF).withOpacity(.2)); })),
-        const SizedBox(height: 18), _SmartFolders(files: _files, selected: _category, dark: dark, onSelect: (v) => setState(() => _category = v)), const SizedBox(height: 18),
-        if (_loading) const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())) else if (_visible.isEmpty) _EmptyState(dark: dark, onAdd: _addFiles) else ..._visible.map((file) => _FileTile(file: file, dark: dark, onOpen: () => _open(file), onRename: () => _rename(file), onDelete: () => _delete(file))),
-      ]),
-      Positioned(left: 18, right: 18, bottom: 14, child: _AddButton(onPressed: _addFiles)),
-    ])));
-  }
-}
-
-class _SearchBox extends StatelessWidget {
-  final TextEditingController controller;
-  final bool dark;
-  const _SearchBox({required this.controller, required this.dark});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.75),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: dark ? Colors.white12 : Colors.white),
-          ),
-          child: TextField(
-            controller: controller,
-            style: const TextStyle(fontFamily: 'Google Sans Flex'),
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.search_rounded, color: dark ? Colors.white60 : Colors.black45),
-              hintText: 'Search files',
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 15),
-            ),
-          ),
-        ),
+  Future<void> _info(Map<String, dynamic> file) async {
+    final date = DateTime.tryParse(file['created_at'].toString())?.toLocal();
+    final imported = DateTime.tryParse(file['imported_at']?.toString() ?? '')?.toLocal();
+    await showCupertinoModalPopup<void>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: Text(file['name'].toString()),
+        message: Text('Name: ${file['name']}\nType: ${file['extension'].toString().toUpperCase()}\nSize: ${_size(file['size_bytes'])}\nDate: ${_date(date)}\nTime: ${_time(date)}\nImported: ${_date(imported)} ${_time(imported)}\nLocation: ${file['location_label'] ?? 'On this device'}\nSource: ${file['source_provider'] ?? 'Inspiro File Manager'}'),
+        actions: [
+          CupertinoActionSheetAction(onPressed: () { Navigator.pop(sheetContext); _openFile(file); }, child: const Text('Open')),
+          if (file['ai_supported'] == true) CupertinoActionSheetAction(onPressed: () { Navigator.pop(sheetContext); Navigator.push(context, MaterialPageRoute(builder: (_) => FileAiChatScreen(file: file))); }, child: const Text('Ask Inspiro AI')),
+        ],
+        cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext), child: const Text('Close')),
       ),
     );
   }
-}
 
-class _SmartFolders extends StatelessWidget {
-  final List<Map<String, dynamic>> files;
-  final String selected;
-  final bool dark;
-  final ValueChanged<String> onSelect;
-  const _SmartFolders({required this.files, required this.selected, required this.dark, required this.onSelect});
+  Future<void> _organize() async {
+    if (_organizing) return;
+    setState(() => _organizing = true);
+    try {
+      await _service.analyzeAndOrganize();
+      await _refresh();
+    } catch (_) {
+      _toast('Could not organize files.', error: true);
+    } finally {
+      if (mounted) setState(() => _organizing = false);
+    }
+  }
+
+  Future<void> _sortSheet() async {
+    final selected = await showCupertinoModalPopup<_SortMode>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: const Text('Sort files'),
+        actions: [
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, _SortMode.name), child: const Text('Name')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, _SortMode.type), child: const Text('Type')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, _SortMode.size), child: const Text('Size')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, _SortMode.newest), child: const Text('Date & time, newest first')),
+          CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext, _SortMode.oldest), child: const Text('Date & time, oldest first')),
+        ],
+        cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(sheetContext), child: const Text('Cancel')),
+      ),
+    );
+    if (selected != null) setState(() => _sort = selected);
+  }
+
+  void _toast(String message, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, backgroundColor: error ? Colors.redAccent : const Color(0xFF4B8DFF)));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final counts = <String, int>{};
-    for (final file in files) {
-      final category = file['category']?.toString() ?? 'other';
-      counts[category] = (counts[category] ?? 0) + 1;
-    }
-    const items = <(String, String, IconData)>[
-      ('school_work', 'School Work', Icons.school_rounded),
-      ('ai_work', 'AI Work', Icons.auto_awesome_rounded),
-      ('notebook_notes', 'Notebook Notes', Icons.menu_book_rounded),
-      ('personal', 'Personal', Icons.person_rounded),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Smart folders', style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
-        const SizedBox(height: 10),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 2.15),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final active = selected == item.$1;
-            return GestureDetector(
-              onTap: () => onSelect(item.$1),
-              child: Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: active ? const Color(0xFF32C5FF).withOpacity(.15) : (dark ? Colors.white.withOpacity(.055) : Colors.white),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: active ? const Color(0xFF32C5FF).withOpacity(.45) : (dark ? Colors.white12 : Colors.white)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(item.$3, color: const Color(0xFF32C5FF)),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item.$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
-                          Text('${counts[item.$1] ?? 0} files', style: TextStyle(color: dark ? Colors.white54 : Colors.black45, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = dark ? Colors.white : const Color(0xFF172033);
+    return Scaffold(
+      backgroundColor: dark ? const Color(0xFF080C14) : const Color(0xFFF2F6FB),
+      body: Stack(children: [
+        const _LiquidBackground(),
+        SafeArea(child: RefreshIndicator(color: const Color(0xFF4B8DFF), onRefresh: _refresh, child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(18, 14, 18, 120), children: [
+          _HeaderRow(),
+          const SizedBox(height: 6),
+          Builder(builder: (context) => _FolderHeader(title: _folderTitle, isRoot: _folderId == null, foreground: foreground, onBack: _goRoot, onFolder: _createFolder, onImport: _import, onOrganize: _organize)),
+          const SizedBox(height: 16),
+          _GlassSearch(controller: _search, dark: dark),
+          const SizedBox(height: 8),
+          Row(children: [Expanded(child: Text('${_folders.length} folders • ${_visibleFiles.length} files', style: TextStyle(color: foreground.withOpacity(.55), fontSize: 13))), CupertinoButton(padding: EdgeInsets.zero, onPressed: _sortSheet, child: Row(children: [Icon(CupertinoIcons.arrow_up_arrow_down, size: 16, color: foreground), const SizedBox(width: 5), Text(_sortLabel, style: TextStyle(color: foreground, fontWeight: FontWeight.w600))]))]),
+          if (_loading) const Padding(padding: EdgeInsets.all(50), child: Center(child: CupertinoActivityIndicator(radius: 14))) else ...[
+            if (_folders.isNotEmpty) ...[_SectionTitle('Folders', foreground), const SizedBox(height: 8), ..._folders.map((folder) => _FolderTile(folder: folder, dark: dark, foreground: foreground, onOpen: () => _openFolder(folder), onRename: () => _renameFolder(folder), onDelete: () => _deleteFolder(folder))), const SizedBox(height: 12)],
+            if (_visibleFiles.isNotEmpty) ...[_SectionTitle('Files', foreground), const SizedBox(height: 8), ..._visibleFiles.map((file) => _FileTile(file: file, dark: dark, foreground: foreground, onOpen: () => _openFile(file), onInfo: () => _info(file), onMove: () => _moveFile(file), onRename: () => _renameFile(file), onDelete: () => _deleteFile(file)))],
+            if (_folders.isEmpty && _visibleFiles.isEmpty) _EmptyFiles(dark: dark, onImport: _import, onFolder: _createFolder),
+          ],
+        ]))),
+      ]),
+      floatingActionButton: FloatingActionButton.extended(onPressed: _import, icon: const Icon(CupertinoIcons.add), label: const Text('Import')),
     );
   }
+
+  String get _sortLabel => switch (_sort) { _SortMode.name => 'Name', _SortMode.type => 'Type', _SortMode.size => 'Size', _SortMode.newest => 'Newest', _SortMode.oldest => 'Oldest' };
+  static String _size(dynamic value) { final bytes = (value as num?)?.toDouble() ?? 0; if (bytes < 1024) return '${bytes.toInt()} B'; if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB'; if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'; return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'; }
+  static String _date(DateTime? value) => value == null ? 'Unknown' : '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+  static String _time(DateTime? value) => value == null ? 'Unknown' : '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+}
+
+class _LiquidBackground extends StatelessWidget {
+  const _LiquidBackground();
+  @override
+  Widget build(BuildContext context) => Stack(children: [Positioned(top: -120, right: -100, child: _orb(300, const Color(0xFF4B8DFF))), Positioned(top: 240, left: -150, child: _orb(320, const Color(0xFF9A7BFF))), Positioned(bottom: -180, right: -120, child: _orb(360, const Color(0xFF56D8C0))), Positioned.fill(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60), child: Container(color: Colors.transparent)))]);
+  Widget _orb(double size, Color color) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(.16), boxShadow: [BoxShadow(color: color.withOpacity(.20), blurRadius: 80, spreadRadius: 20)]));
+}
+
+class _HeaderRow extends StatelessWidget {
+  const _HeaderRow();
+  @override
+  Widget build(BuildContext context) => Align(alignment: Alignment.centerLeft, child: Text('Files', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033), fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: .4)));
+}
+
+class _FolderHeader extends StatelessWidget {
+  final String title;
+  final bool isRoot;
+  final Color foreground;
+  final VoidCallback onBack;
+  final VoidCallback onFolder;
+  final VoidCallback onImport;
+  final VoidCallback onOrganize;
+  const _FolderHeader({required this.title, required this.isRoot, required this.foreground, required this.onBack, required this.onFolder, required this.onImport, required this.onOrganize});
+  @override
+  Widget build(BuildContext context) => Row(children: [if (!isRoot) _GlassButton(icon: CupertinoIcons.chevron_left, onTap: onBack) else const SizedBox(width: 42), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('File Manager', style: TextStyle(color: foreground.withOpacity(.5), fontSize: 12)), Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: foreground, fontSize: 28, fontWeight: FontWeight.w800))])), _GlassButton(icon: CupertinoIcons.folder_badge_plus, onTap: onFolder), const SizedBox(width: 6), _GlassButton(icon: CupertinoIcons.cloud_download, onTap: onImport), const SizedBox(width: 6), _GlassButton(icon: CupertinoIcons.sparkles, onTap: onOrganize)]);
+}
+
+class _GlassButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _GlassButton({required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) { final dark = Theme.of(context).brightness == Brightness.dark; return ClipRRect(borderRadius: BorderRadius.circular(17), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: dark ? Colors.white.withOpacity(.08) : Colors.white.withOpacity(.72), child: InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.all(11), child: Icon(icon, size: 19, color: dark ? Colors.white : const Color(0xFF1A2A43))))))); }
+}
+
+class _GlassSearch extends StatelessWidget {
+  final TextEditingController controller;
+  final bool dark;
+  const _GlassSearch({required this.controller, required this.dark});
+  @override
+  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(24), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22), child: Container(decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.08) : Colors.white.withOpacity(.75), borderRadius: BorderRadius.circular(24), border: Border.all(color: dark ? Colors.white.withOpacity(.12) : Colors.white)), child: TextField(controller: controller, decoration: InputDecoration(prefixIcon: Icon(CupertinoIcons.search, color: dark ? Colors.white60 : Colors.black45), hintText: 'Search files and folders', border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 16)))));
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final Color color;
+  const _SectionTitle(this.title, this.color);
+  @override
+  Widget build(BuildContext context) => Text(title, style: TextStyle(color: color, fontSize: 17, fontWeight: FontWeight.w800));
+}
+
+class _FolderTile extends StatelessWidget {
+  final Map<String, dynamic> folder;
+  final bool dark;
+  final Color foreground;
+  final VoidCallback onOpen;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+  const _FolderTile({required this.folder, required this.dark, required this.foreground, required this.onOpen, required this.onRename, required this.onDelete});
+  @override
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 9), child: ClipRRect(borderRadius: BorderRadius.circular(22), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: dark ? Colors.white.withOpacity(.065) : Colors.white.withOpacity(.78), child: InkWell(onTap: onOpen, child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFF4B8DFF).withOpacity(.14), borderRadius: BorderRadius.circular(16)), child: const Icon(CupertinoIcons.folder_fill, color: Color(0xFF4B8DFF))), const SizedBox(width: 13), Expanded(child: Text(folder['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: foreground, fontWeight: FontWeight.w700))), CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showCupertinoModalPopup(context: context, builder: (_) => CupertinoActionSheet(actions: [CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onRename(); }, child: const Text('Rename folder')), CupertinoActionSheetAction(isDestructiveAction: true, onPressed: () { Navigator.pop(context); onDelete(); }, child: const Text('Delete folder'))], cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')))), child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)))]))))));
 }
 
 class _FileTile extends StatelessWidget {
-  final Map<String, dynamic> file; final bool dark; final VoidCallback onOpen, onRename, onDelete;
-  const _FileTile({required this.file, required this.dark, required this.onOpen, required this.onRename, required this.onDelete});
-  @override Widget build(BuildContext context) {
-    final ai = file['ai_supported'] == true; final ext = file['extension'].toString(); final size = (file['size_bytes'] as num? ?? 0) / 1024;
-    return Container(margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.055) : Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: dark ? Colors.white12 : Colors.white)), child: ListTile(onTap: onOpen, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), leading: Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFF32C5FF).withOpacity(.14), borderRadius: BorderRadius.circular(15)), child: Icon(_icon(ext), color: const Color(0xFF32C5FF))), title: Text(file['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), subtitle: Text('${_label(file['category'])} • ${size < 1024 ? '${size.toStringAsFixed(0)} KB' : '${(size / 1024).toStringAsFixed(1)} MB'}${ai ? ' • AI ready' : ''}', style: TextStyle(color: dark ? Colors.white54 : Colors.black45, fontSize: 11)), trailing: PopupMenuButton<String>(onSelected: (v) { if (v == 'rename') onRename(); if (v == 'delete') onDelete(); }, itemBuilder: (_) => const [PopupMenuItem(value: 'rename', child: Text('Rename')), PopupMenuItem(value: 'delete', child: Text('Delete'))])));
-  }
-  static IconData _icon(String e) { switch (e) { case 'pdf': return Icons.picture_as_pdf_rounded; case 'txt': case 'md': return Icons.article_rounded; case 'docx': return Icons.description_rounded; case 'xlsx': return Icons.table_chart_rounded; case 'pptx': return Icons.slideshow_rounded; case 'jpg': case 'jpeg': case 'png': case 'webp': return Icons.image_rounded; default: return Icons.insert_drive_file_rounded; } }
-  static String _label(String v) => {'school_work':'School Work','ai_work':'AI Work','notebook_notes':'Notebook Notes','personal':'Personal','documents':'Documents','images':'Images','other':'Other'}[v] ?? 'Other';
-}
-
-class _FileActionSheet extends StatelessWidget {
   final Map<String, dynamic> file;
-  const _FileActionSheet({required this.file});
-  @override Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.fromLTRB(20, 14, 20, 30), decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))), child: Column(mainAxisSize: MainAxisSize.min, children: [Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4))), const SizedBox(height: 14), ListTile(leading: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF32C5FF)), title: const Text('Ask Inspiro AI', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), subtitle: const Text('Use only this file as grounded AI context.'), onTap: () => Navigator.pop(context, true)), ListTile(leading: const Icon(Icons.visibility_rounded), title: const Text('Preview', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () => Navigator.pop(context, false))]));
-  }
+  final bool dark;
+  final Color foreground;
+  final VoidCallback onOpen;
+  final VoidCallback onInfo;
+  final VoidCallback onMove;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+  const _FileTile({required this.file, required this.dark, required this.foreground, required this.onOpen, required this.onInfo, required this.onMove, required this.onRename, required this.onDelete});
+  @override
+  Widget build(BuildContext context) { final ext = file['extension'].toString().toLowerCase(); final ai = file['ai_supported'] == true; return Padding(padding: const EdgeInsets.only(bottom: 9), child: ClipRRect(borderRadius: BorderRadius.circular(23), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: dark ? Colors.white.withOpacity(.055) : Colors.white.withOpacity(.78), child: InkWell(onTap: onOpen, child: Padding(padding: const EdgeInsets.all(13), child: Row(children: [Container(width: 50, height: 50, decoration: BoxDecoration(color: _color(ext).withOpacity(.13), borderRadius: BorderRadius.circular(16)), child: Icon(_icon(ext), color: _color(ext), size: 25)), const SizedBox(width: 13), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(file['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: foreground, fontWeight: FontWeight.w700, fontSize: 14.5)), const SizedBox(height: 5), Text('${ext.toUpperCase()} • ${_size(file['size_bytes'])}${ai ? ' • AI ready' : ''}', style: TextStyle(color: foreground.withOpacity(.5), fontSize: 11.5))])), CupertinoButton(padding: const EdgeInsets.all(6), onPressed: onInfo, child: const Icon(CupertinoIcons.info_circle, color: Color(0xFF4B8DFF), size: 21)), CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showCupertinoModalPopup(context: context, builder: (_) => CupertinoActionSheet(actions: [CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onOpen(); }, child: const Text('Open')), CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onMove(); }, child: const Text('Move to folder')), CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onRename(); }, child: const Text('Rename')), CupertinoActionSheetAction(isDestructiveAction: true, onPressed: () { Navigator.pop(context); onDelete(); }, child: const Text('Delete'))], cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')))), child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)))])))))); }
+  static IconData _icon(String ext) { if (ext == 'pdf') return CupertinoIcons.doc_text_fill; if ({'jpg','jpeg','png','gif','webp'}.contains(ext)) return CupertinoIcons.photo; if ({'mp3','wav'}.contains(ext)) return CupertinoIcons.music_note; if ({'mp4','mov'}.contains(ext)) return CupertinoIcons.film; if (ext == 'txt' || ext == 'md') return CupertinoIcons.doc_plaintext; return CupertinoIcons.doc; }
+  static Color _color(String ext) { if (ext == 'pdf') return const Color(0xFFFF5D73); if ({'jpg','jpeg','png','gif','webp'}.contains(ext)) return const Color(0xFF9A7BFF); if ({'xls','xlsx','csv'}.contains(ext)) return const Color(0xFF27B67A); return const Color(0xFF4B8DFF); }
+  static String _size(dynamic value) { final bytes = (value as num?)?.toDouble() ?? 0; if (bytes < 1024) return '${bytes.toInt()} B'; if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB'; return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'; }
 }
 
-class _PreviewSheet extends StatelessWidget {
-  final Map<String, dynamic> file; final Uint8List bytes;
-  const _PreviewSheet({required this.file, required this.bytes});
-  @override Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final text = file['content_text']?.toString();
-    final ext = file['extension'].toString();
-    return Container(constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .82), padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), decoration: BoxDecoration(color: dark ? const Color(0xFF161A22) : Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(30))), child: SafeArea(child: Column(children: [Container(width: 42, height: 4, decoration: BoxDecoration(color: dark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(4))), const SizedBox(height: 15), Row(children: [Expanded(child: Text(file['name'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 19, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex'))), IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded))]), const SizedBox(height: 10), Expanded(child: text != null && text.isNotEmpty ? SingleChildScrollView(child: SelectableText(text, style: TextStyle(color: dark ? Colors.white70 : Colors.black87, height: 1.45, fontFamily: 'Google Sans Flex'))) : ['jpg','jpeg','png','webp'].contains(ext) ? SingleChildScrollView(child: Image.memory(bytes, fit: BoxFit.contain)) : Center(child: Text('Preview is not available for this file type yet.', textAlign: TextAlign.center, style: TextStyle(color: dark ? Colors.white54 : Colors.black54, fontFamily: 'Google Sans Flex'))))])));
-  }
+class _EmptyFiles extends StatelessWidget {
+  final bool dark;
+  final VoidCallback onImport;
+  final VoidCallback onFolder;
+  const _EmptyFiles({required this.dark, required this.onImport, required this.onFolder});
+  @override
+  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 30), padding: const EdgeInsets.all(28), decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.06) : Colors.white.withOpacity(.72), borderRadius: BorderRadius.circular(30), border: Border.all(color: dark ? Colors.white12 : Colors.white)), child: Column(children: [Icon(CupertinoIcons.folder, size: 54, color: dark ? Colors.white38 : const Color(0xFF9AA9BD)), const SizedBox(height: 14), const Text('Your space is ready.', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 7), Text('Create folders or import from Files, Gallery, Drive, OneDrive and other apps.', textAlign: TextAlign.center, style: TextStyle(color: dark ? Colors.white60 : Colors.black54, height: 1.4)), const SizedBox(height: 18), Row(children: [Expanded(child: CupertinoButton.filled(onPressed: onImport, child: const Text('Import'))), const SizedBox(width: 10), Expanded(child: CupertinoButton(onPressed: onFolder, child: const Text('New folder')))])]));
 }
 
-class _EmptyState extends StatelessWidget {
-  final bool dark; final VoidCallback onAdd;
-  const _EmptyState({required this.dark, required this.onAdd});
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(30), decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.05) : Colors.white, borderRadius: BorderRadius.circular(28)), child: Column(children: [Icon(Icons.folder_open_rounded, size: 56, color: dark ? Colors.white30 : Colors.black26), const SizedBox(height: 12), Text('No files here yet', style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Google Sans Flex')), const SizedBox(height: 6), Text('Add a supported file and Inspiro can organize it for you.', textAlign: TextAlign.center, style: TextStyle(color: dark ? Colors.white54 : Colors.black54)), const SizedBox(height: 14), OutlinedButton.icon(onPressed: onAdd, icon: const Icon(Icons.upload_file_rounded), label: const Text('Add file'))]));
-}
-
-class _AddButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddButton({required this.onPressed});
-  @override Widget build(BuildContext context) {
-    return ClipRRect(borderRadius: BorderRadius.circular(28), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), child: Material(color: const Color(0xFF32C5FF).withOpacity(.9), child: InkWell(onTap: onPressed, child: const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_rounded, color: Colors.white), SizedBox(width: 8), Text('Add files from device', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex'))]))))));
-  }
+class FilePreviewScreen extends StatelessWidget {
+  final Map<String, dynamic> file;
+  final Uint8List bytes;
+  const FilePreviewScreen({super.key, required this.file, required this.bytes});
+  @override
+  Widget build(BuildContext context) { final dark = Theme.of(context).brightness == Brightness.dark; return Scaffold(backgroundColor: dark ? const Color(0xFF090D14) : const Color(0xFFF4F7FB), appBar: AppBar(title: Text(file['name'].toString()), leading: IconButton(icon: const Icon(CupertinoIcons.xmark), onPressed: () => Navigator.pop(context))), body: SafeArea(child: _body(context))); }
+  Widget _body(BuildContext context) { final ext = file['extension'].toString().toLowerCase(); if (ext == 'pdf') return SfPdfViewer.memory(bytes); if ({'jpg','jpeg','png','gif','webp'}.contains(ext)) return Center(child: InteractiveViewer(child: Image.memory(bytes, fit: BoxFit.contain))); if (ext == 'txt' || ext == 'md') return SingleChildScrollView(padding: const EdgeInsets.all(22), child: SelectableText(String.fromCharCodes(bytes), style: const TextStyle(fontSize: 15, height: 1.55))); return Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(CupertinoIcons.doc, size: 68, color: Color(0xFF4B8DFF)), const SizedBox(height: 18), Text(file['name'].toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), const Text('The original file is stored unchanged. This format can be opened or shared from the file actions.', textAlign: TextAlign.center)]))); }
 }
