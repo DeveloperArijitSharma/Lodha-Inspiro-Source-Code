@@ -121,9 +121,32 @@ class _SearchBox extends StatelessWidget {
   final TextEditingController controller;
   final bool dark;
   const _SearchBox({required this.controller, required this.dark});
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(borderRadius: BorderRadius.circular(22), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Container(decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.75), borderRadius: BorderRadius.circular(22), border: Border.all(color: dark ? Colors.white12 : Colors.white)), child: TextField(controller: controller, style: const TextStyle(fontFamily: 'Google Sans Flex'), decoration: InputDecoration(prefixIcon: Icon(Icons.search_rounded, color: dark ? Colors.white60 : Colors.black45), hintText: 'Search files', border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 15)))));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.75),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: dark ? Colors.white12 : Colors.white),
+          ),
+          child: TextField(
+            controller: controller,
+            style: const TextStyle(fontFamily: 'Google Sans Flex'),
+            decoration: InputDecoration(
+              prefixIcon: Icon(Icons.search_rounded, color: dark ? Colors.white60 : Colors.black45),
+              hintText: 'Search files',
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
