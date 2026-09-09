@@ -10,6 +10,7 @@ class GeminiService {
   GeminiService._();
   static final GeminiService instance = GeminiService._();
   static int _cursor = 0;
+  static final Map<String, DateTime> _rateLimitedUntil = {};
 
   Future<String> _generate({
     required List<Map<String, dynamic>> parts,
@@ -59,21 +60,31 @@ class GeminiService {
     }
 
     String? last;
+    var attemptedKey = false;
+
     for (var attempt = 0; attempt < keys.length; attempt++) {
       final i = (_cursor + attempt) % keys.length;
+      final key = keys[i];
+      final blockedUntil = _rateLimitedUntil[key];
+      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        continue;
+      }
+      attemptedKey = true;
+
       try {
         final endpoint =
             'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent';
         final r = await http.post(
           Uri.parse(endpoint),
           headers: {
-            'x-goog-api-key': keys[i],
+            'x-goog-api-key': key,
             'Content-Type': 'application/json',
           },
           body: jsonEncode(body),
         );
 
         if (r.statusCode >= 200 && r.statusCode < 300) {
+          _rateLimitedUntil.remove(key);
           _cursor = (i + 1) % keys.length;
           final d = jsonDecode(r.body) as Map<String, dynamic>;
           final candidates = d['candidates'];
@@ -101,31 +112,35 @@ class GeminiService {
           return text;
         }
 
-        last = 'Gemini API error (${r.statusCode}): ${_extractError(r.body)}';
-        if (r.statusCode != 401 &&
-            r.statusCode != 403 &&
-            r.statusCode != 429 &&
-            r.statusCode < 500) {
-          break;
+        final isQuotaOrTransient =
+            r.statusCode == 429 || r.statusCode == 403 || r.statusCode >= 500;
+        if (isQuotaOrTransient) {
+          // Do not expose this key's quota/error to the student. Move on to
+          // another configured key and keep the original request intact.
+          if (r.statusCode == 429 || r.statusCode == 403) {
+            _rateLimitedUntil[key] = DateTime.now().add(const Duration(minutes: 2));
+          }
+          last = 'Gemini temporarily unavailable.';
+          continue;
         }
+
+        last = 'Gemini request failed.';
+        break;
       } catch (e) {
-        last = e.toString();
+        // Parsing/transport failures on one key should not stop the key pool.
+        last = e is GeminiException ? e.message : 'Gemini temporarily unavailable.';
+        continue;
       }
     }
 
-    throw GeminiException(last ?? 'All configured Gemini keys failed.');
-  }
-
-  String _extractError(String body) {
-    try {
-      final d = jsonDecode(body);
-      if (d is Map && d['error'] is Map) {
-        return (d['error'] as Map)['message']?.toString() ?? body;
-      }
-      return body;
-    } catch (_) {
-      return body;
+    if (!attemptedKey) {
+      throw GeminiException(
+        'Gemini is temporarily busy. Please try again in a moment.',
+      );
     }
+    throw GeminiException(
+      'The AI service is temporarily unavailable. Please try again.',
+    );
   }
 
   List<Map<String, dynamic>> _sourceParts(List<NotebookSource> sources) {
