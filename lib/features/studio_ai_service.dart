@@ -6,40 +6,45 @@ import '../gemini/gemini_service.dart';
 
 class StudioAiService {
   static int _cursor = 0;
-  static final Map<String, DateTime> _rateLimitedUntil = {};
+  static final Map<String, DateTime> _rateLimitedUntil = <String, DateTime>{};
+
+  List<String> _groqKeys() => AiKeyPool.groqKeys
+      .map((String key) => key.trim())
+      .where((String key) => key.isNotEmpty)
+      .toList(growable: false);
 
   Future<String> generate(String prompt) async {
-    final keys = AiKeyPool.availableGroqKeys;
+    final List<String> keys = _groqKeys();
     if (keys.isEmpty) {
       throw GeminiException(
         'Studio AI has no Groq key. Configure GROQ_API_KEY_1 through GROQ_API_KEY_10.',
       );
     }
 
-    for (var attempt = 0; attempt < keys.length; attempt++) {
-      final i = (_cursor + attempt) % keys.length;
-      final key = keys[i];
-      final blockedUntil = _rateLimitedUntil[key];
+    for (int attempt = 0; attempt < keys.length; attempt++) {
+      final int i = (_cursor + attempt) % keys.length;
+      final String key = keys[i];
+      final DateTime? blockedUntil = _rateLimitedUntil[key];
       if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
         continue;
       }
 
       try {
-        final response = await http.post(
+        final http.Response response = await http.post(
           Uri.parse(GroqConfig.endpoint),
-          headers: {
+          headers: <String, String>{
             'Authorization': 'Bearer $key',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
+          body: jsonEncode(<String, dynamic>{
             'model': GroqConfig.model,
-            'messages': [
-              {
+            'messages': <Map<String, String>>[
+              <String, String>{
                 'role': 'system',
                 'content':
                     'You create safe, clear, age-appropriate student classwork. Return only the format requested.',
               },
-              {'role': 'user', 'content': prompt},
+              <String, String>{'role': 'user', 'content': prompt},
             ],
             'temperature': 0.35,
             'max_completion_tokens': 2500,
@@ -49,15 +54,16 @@ class StudioAiService {
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           _rateLimitedUntil.remove(key);
-          _cursor = (i + 1) % keys.length;
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final choices = data['choices'];
+          _cursor = (i + 1).toInt() % keys.length;
+          final dynamic decoded = jsonDecode(response.body);
+          if (decoded is! Map<String, dynamic>) continue;
+          final dynamic choices = decoded['choices'];
           if (choices is! List || choices.isEmpty) continue;
-          final first = choices.first;
+          final dynamic first = choices.first;
           if (first is! Map) continue;
-          final message = first['message'];
+          final dynamic message = first['message'];
           if (message is! Map) continue;
-          final text = message['content']?.toString().trim() ?? '';
+          final String text = message['content']?.toString().trim() ?? '';
           if (text.isNotEmpty) return text;
           continue;
         }
@@ -77,9 +83,10 @@ class StudioAiService {
       }
     }
 
-    final allCooling = keys.every((key) {
-      final until = _rateLimitedUntil[key];
-      return until != null && until.isAfter(DateTime.now());
+    final DateTime now = DateTime.now();
+    final bool allCooling = keys.every((String key) {
+      final DateTime? until = _rateLimitedUntil[key];
+      return until != null && until.isAfter(now);
     });
     if (allCooling) {
       throw GeminiException('Studio AI is temporarily busy. Please try again.');
