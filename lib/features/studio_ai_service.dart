@@ -8,10 +8,7 @@ class StudioAiService {
   static int _cursor = 0;
   static final Map<String, DateTime> _rateLimitedUntil = <String, DateTime>{};
 
-  List<String> _groqKeys() => AiKeyPool.keys
-      .map((String key) => key.trim())
-      .where((String key) => key.isNotEmpty)
-      .toList(growable: false);
+  List<String> _groqKeys() => AiKeyPool.groqKeys;
 
   Future<String> generate(String prompt) async {
     final List<String> keys = _groqKeys();
@@ -49,10 +46,8 @@ class StudioAiService {
           continue;
         }
         if (response.statusCode == 429 || response.statusCode == 403) _rateLimitedUntil[key] = DateTime.now().add(const Duration(minutes: 2));
-        // Any failed key is skipped and the next configured key is tried.
         continue;
       } catch (_) {
-        // Network/key failure: silently move to the next configured key.
         continue;
       }
     }
