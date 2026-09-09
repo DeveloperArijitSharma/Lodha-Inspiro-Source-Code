@@ -27,10 +27,10 @@ class Notebook {
 
 /// A single source document attached to a notebook.
 ///
-/// [textContent] is used for plain text/markdown/pasted sources.
-/// [base64Data] + [mimeType] is used for anything binary (PDF, images) —
-/// Gemini reads these natively, so we never parse PDFs on-device, which is
-/// what keeps this working identically on Android/iOS/macOS/Windows/web.
+/// PDFs are converted to hidden text before this model is saved. Groq receives
+/// that stored text for grounded Notebook answers. Plain text/markdown sources
+/// continue to use [textContent]. [base64Data] is retained only for backwards
+/// compatibility with older source rows.
 class NotebookSource {
   final String id;
   final String notebookId;
@@ -98,8 +98,6 @@ class ChatMessage {
       };
 }
 
-/// A saved, editable note — either typed by the student directly, or saved
-/// from an AI chat answer they wanted to keep (mirrors NotebookLM's notes).
 class NotebookNote {
   final String id;
   final String notebookId;
