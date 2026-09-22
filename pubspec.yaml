@@ -10,7 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  flutter_markdown: ^0.7.7+1
 
   # Your Database & Auth
   supabase_flutter: ^2.3.0
