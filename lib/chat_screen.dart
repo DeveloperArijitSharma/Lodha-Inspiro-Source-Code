@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -681,14 +682,70 @@ class _ChatScreenState extends State<ChatScreen> {
                   msg['text']?.toString().isNotEmpty == true)
                 const SizedBox(height: 8),
               if (msg['text']?.toString().isNotEmpty == true)
-                Text(
-                  msg['text'].toString(),
-                  style: TextStyle(
-                    color: isMe
-                        ? Colors.white
-                        : (isDark ? Colors.white : Colors.black87),
-                    fontSize: 15,
-                    fontFamily: InspiroUi.systemFont,
+                MarkdownBody(
+                  data: msg['text'].toString(),
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 15,
+                      fontFamily: InspiroUi.systemFont,
+                      height: 1.35,
+                    ),
+                    h1: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    h2: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    h3: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    strong: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontWeight: FontWeight.w800,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    em: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontStyle: FontStyle.italic,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    listBullet: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 15,
+                      fontFamily: InspiroUi.systemFont,
+                    ),
+                    code: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               if (msg['edited_at'] != null)
