@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -1082,13 +1083,54 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                 bottomRight: Radius.circular(isUser ? 4 : 20),
               ),
             ),
-            child: Text(
-              msg.text,
-              style: TextStyle(
-                color: isUser ? Colors.white : textColor,
-                fontFamily: 'Google Sans Flex',
-                fontSize: 14.5,
-                height: 1.4,
+            child: MarkdownBody(
+              data: msg.text,
+              selectable: true,
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontSize: 14.5,
+                  height: 1.4,
+                ),
+                h1: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+                h2: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+                h3: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+                strong: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontWeight: FontWeight.w800,
+                ),
+                em: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontStyle: FontStyle.italic,
+                ),
+                listBullet: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'Google Sans Flex',
+                  fontSize: 14.5,
+                ),
+                code: TextStyle(
+                  color: isUser ? Colors.white : textColor,
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                ),
               ),
             ),
           ),
