@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:uuid/uuid.dart';
@@ -16,6 +17,7 @@ import 'notebook_models.dart';
 import 'notebook_quiz_screen.dart';
 import 'notebook_repository.dart';
 import 'note_export_service.dart';
+import '../file_manager/file_manager_service.dart';
 
 const _accentBlue = Color(0xFF32C5FF);
 final _uuid = Uuid();
@@ -292,7 +294,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                           tileColor: dark ? Colors.white.withOpacity(.06) : Colors.black.withOpacity(.04),
                           leading: Icon(ext == 'pdf' ? CupertinoIcons.doc_text_fill : CupertinoIcons.doc_plaintext, color: _accentBlue),
                           title: Text(file['name']?.toString() ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
-                          subtitle: Text('\${ext.toUpperCase()} • \${_formatFileSize(file['size_bytes'])}', style: TextStyle(color: dark ? Colors.white54 : Colors.black45, fontSize: 12)),
+                          subtitle: Text('${ext.toUpperCase()} • ${_formatFileSize(file['size_bytes'])}', style: TextStyle(color: dark ? Colors.white54 : Colors.black45, fontSize: 12)),
                           trailing: const Icon(CupertinoIcons.chevron_right, size: 17),
                           onTap: () => Navigator.pop(sheetContext, file),
                         );
@@ -307,14 +309,14 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       );
 
       if (selected == null || !mounted) return;
-      _toast('Adding \${selected['name']} from File Manager...');
+      _toast('Adding ${selected['name']} from File Manager...');
       final saved = await _repo.addFileManagerSource(widget.notebook.id, selected);
       if (!mounted) return;
       setState(() => _sources.add(saved));
       _toast('Source added from File Manager.');
       _loadSuggestions();
     } catch (e) {
-      _toast('Could not add that File Manager source: \$e', error: true);
+      _toast('Could not add that File Manager source: $e', error: true);
     }
   }
 
