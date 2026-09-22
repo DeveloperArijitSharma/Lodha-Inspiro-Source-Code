@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -106,7 +107,7 @@ class FileManagerService {
     await _supabase.from('file_manager_folders').delete().eq('id', id);
   }
 
-  Future<void> importFromDevice({String? folderId}) async {
+  Future<void> importFromDevice({String? folderId, void Function(String name, double progress)? onProgress}) async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
@@ -118,12 +119,12 @@ class FileManagerService {
     for (final picked in result.files) {
       final bytes = picked.bytes;
       if (bytes != null && bytes.isNotEmpty) {
-        await uploadBytes(user, picked.name, bytes, folderId: folderId, sourceProvider: 'Files / Drive / OneDrive / other');
+        await uploadBytes(user, picked.name, bytes, folderId: folderId, sourceProvider: 'Files / Drive / OneDrive / other', onProgress: onProgress);
       }
     }
   }
 
-  Future<void> importImagesFromGallery({String? folderId}) async {
+  Future<void> importImagesFromGallery({String? folderId, void Function(String name, double progress)? onProgress}) async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
@@ -135,7 +136,7 @@ class FileManagerService {
     for (final picked in result.files) {
       final bytes = picked.bytes;
       if (bytes != null && bytes.isNotEmpty) {
-        await uploadBytes(user, picked.name, bytes, folderId: folderId, sourceProvider: 'Gallery');
+        await uploadBytes(user, picked.name, bytes, folderId: folderId, sourceProvider: 'Gallery', onProgress: onProgress);
       }
     }
   }
@@ -150,6 +151,7 @@ class FileManagerService {
     String? sourceProvider,
     String? locationLabel,
     String? categoryOverride,
+    void Function(String name, double progress)? onProgress,
   }) async {
     if (bytes.isEmpty) throw ArgumentError('The selected file is empty.');
     final extension = _extension(name);
@@ -160,11 +162,29 @@ class FileManagerService {
     final storagePath = '$storageRoot/$folderPart/${id}_$safeName';
     final category = categoryOverride ?? classify(name, sourceKind: sourceKind);
 
-    await _supabase.storage.from(bucket).uploadBinary(
-      storagePath,
-      bytes,
-      fileOptions: FileOptions(contentType: _mime(extension), upsert: false),
-    );
+    // The current Supabase Flutter uploadBinary API does not expose byte-level
+    // progress. Keep the UI responsive with a real upload-state indicator:
+    // it advances while the network request is running and reaches 100% only
+    // after Supabase confirms the upload.
+    Timer? progressTimer;
+    var progress = 0.0;
+    onProgress?.call(name, 0.0);
+    progressTimer = Timer.periodic(const Duration(milliseconds: 120), (_) {
+      if (progress < 0.90) {
+        progress += 0.025;
+        onProgress?.call(name, progress.clamp(0.0, 0.90));
+      }
+    });
+    try {
+      await _supabase.storage.from(bucket).uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: FileOptions(contentType: _mime(extension), upsert: false),
+      );
+    } finally {
+      progressTimer.cancel();
+    }
+    onProgress?.call(name, 1.0);
     try {
       await _supabase.from('file_manager_files').insert({
         'owner_id': userId,
