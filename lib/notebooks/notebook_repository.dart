@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../file_manager/file_manager_service.dart';
 import 'notebook_models.dart';
 import 'pdf_text_extractor.dart';
@@ -58,6 +59,45 @@ class NotebookRepository {
     }
     final row = await _client.from('notebook_sources').insert(source.toInsertMap(source.notebookId)).select().single();
     return NotebookSource.fromMap(Map<String, dynamic>.from(row));
+  }
+
+  Future<NotebookSource> addFileManagerSource(
+    String notebookId,
+    Map<String, dynamic> file,
+  ) async {
+    _requireUserId();
+
+    final extension = file['extension']?.toString().toLowerCase() ?? '';
+    if (!{'pdf', 'txt', 'md'}.contains(extension)) {
+      throw StateError(
+        'Only PDF, TXT, and Markdown files can be used as Home AI sources.',
+      );
+    }
+
+    final bytes = await FileManagerService.instance.download(file);
+    String? textContent;
+    String? base64Data;
+
+    if (extension == 'txt' || extension == 'md') {
+      textContent = utf8.decode(bytes, allowMalformed: true);
+    } else {
+      // Reuse the existing File Manager object. We do not upload it again.
+      // The existing notebook PDF pipeline extracts the text from this copy.
+      base64Data = base64Encode(bytes);
+    }
+
+    final source = NotebookSource(
+      id: const Uuid().v4(),
+      notebookId: notebookId,
+      title: file['name']?.toString() ?? 'File Manager source',
+      mimeType: file['mime_type']?.toString() ??
+          (extension == 'pdf' ? 'application/pdf' : 'text/plain'),
+      textContent: textContent,
+      base64Data: base64Data,
+      createdAt: DateTime.now(),
+    );
+
+    return addSource(source);
   }
 
   Future<void> deleteSource(String id) async {
