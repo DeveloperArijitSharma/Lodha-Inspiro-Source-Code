@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,7 +11,6 @@ import 'messaging/message_actions_sheet.dart';
 import 'messaging/message_models.dart';
 import 'messaging/message_repository.dart';
 import 'notification_service.dart';
-import 'ui/app_ui.dart';
 import 'widgets/voice_text_button.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -43,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isUploading = false;
   RealtimeChannel? _messageChannel;
 
-  Color get _accentBlue => InspiroUi.accent;
+  Color get _accentBlue => const Color(0xFF4B8DFF);
 
   @override
   void initState() {
@@ -306,7 +304,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF172033);
     final bgColor =
-        isDark ? InspiroUi.darkBackground : InspiroUi.lightBackground;
+        isDark ? const Color(0xFF080B12) : const Color(0xFFF2F5F9);
     final currentUserId = supabase.auth.currentUser?.id;
 
     return Scaffold(
@@ -351,7 +349,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: textColor,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
-                  fontFamily: InspiroUi.systemFont,
+                  fontFamily: 'Google Sans Flex',
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -375,7 +373,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           'No messages yet. Start the conversation!',
                           style: TextStyle(
                             color: isDark ? Colors.white54 : Colors.black54,
-                            fontFamily: InspiroUi.systemFont,
+                            fontFamily: 'Google Sans Flex',
                           ),
                         ),
                       )
@@ -409,7 +407,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     'Uploading image attachment...',
                     style: TextStyle(
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                       color: textColor,
                     ),
                   ),
@@ -461,7 +459,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           controller: _messageController,
                           style: TextStyle(
                             color: textColor,
-                            fontFamily: InspiroUi.systemFont,
+                            fontFamily: 'Google Sans Flex',
                           ),
                           decoration: InputDecoration(
                             hintText: 'Type a message...',
@@ -469,7 +467,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: isDark
                                   ? Colors.white54
                                   : Colors.black45,
-                              fontFamily: InspiroUi.systemFont,
+                              fontFamily: 'Google Sans Flex',
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
@@ -553,7 +551,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     color: _accentBlue,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    fontFamily: InspiroUi.systemFont,
+                    fontFamily: 'Google Sans Flex',
                   ),
                 ),
                 Text(
@@ -564,7 +562,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isDark ? Colors.white70 : Colors.black87,
-                    fontFamily: InspiroUi.systemFont,
+                    fontFamily: 'Google Sans Flex',
                   ),
                 ),
               ],
@@ -580,6 +578,487 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMarkdownMessage(String markdown, Color color) {
+    final lines = markdown.replaceAll('\\r\\n', '\\n').split('\\n');
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final heading = RegExp(r'^(#{1,3})\\s+(.*)
+    Map<String, dynamic> msg,
+    bool isMe,
+    bool isDark,
+  ) {
+    final deleted = msg['deleted_at'] != null;
+    final reply = _messageById(msg['reply_to_message_id']?.toString());
+    final rawReactions = msg['reactions'];
+    final reactions = rawReactions is Map
+        ? Map<String, dynamic>.from(rawReactions)
+        : <String, dynamic>{};
+
+    final incomingColor =
+        isDark ? const Color(0xFF111722) : Colors.white.withOpacity(.78);
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * .75,
+        ),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? _accentBlue : incomingColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: Radius.circular(isMe ? 20 : 5),
+            bottomRight: Radius.circular(isMe ? 5 : 20),
+          ),
+          border: Border.all(
+            color: isMe
+                ? Colors.white.withOpacity(.10)
+                : (isDark ? Colors.white12 : Colors.white),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? .10 : .06),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (reply != null && !deleted)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isMe
+                      ? Colors.white.withOpacity(.15)
+                      : (isDark
+                          ? Colors.white.withOpacity(.06)
+                          : Colors.black.withOpacity(.05)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  reply['text']?.toString().isNotEmpty == true
+                      ? reply['text'].toString()
+                      : 'Attachment',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isMe
+                        ? Colors.white70
+                        : (isDark ? Colors.white60 : Colors.black54),
+                    fontSize: 12,
+                    fontFamily: 'Google Sans Flex',
+                  ),
+                ),
+              ),
+            if (deleted)
+              Text(
+                'Message deleted',
+                style: TextStyle(
+                  color: isMe
+                      ? Colors.white70
+                      : (isDark ? Colors.white38 : Colors.black45),
+                  fontStyle: FontStyle.italic,
+                  fontFamily: 'Google Sans Flex',
+                ),
+              )
+            else ...[
+              if (msg['attachment_url']?.toString().isNotEmpty == true)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    msg['attachment_url'].toString(),
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              if (msg['attachment_url']?.toString().isNotEmpty == true &&
+                  msg['text']?.toString().isNotEmpty == true)
+                const SizedBox(height: 8),
+              if (msg['text']?.toString().isNotEmpty == true)
+                _buildMarkdownMessage(
+                  msg['text'].toString(),
+                  isMe
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
+                    h1: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    h2: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    h3: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    strong: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    em: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontStyle: FontStyle.italic,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    listBullet: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 15,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    code: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              if (msg['edited_at'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'edited',
+                    style: TextStyle(
+                      color: isMe
+                          ? Colors.white60
+                          : (isDark ? Colors.white38 : Colors.black45),
+                      fontSize: 10,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                  ),
+                ),
+            ],
+            if (reactions.isNotEmpty && !deleted)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 4,
+                  children: reactions.entries.map((entry) {
+                    final users =
+                        entry.value is List ? entry.value as List : const [];
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isMe
+                            ? Colors.white.withOpacity(.18)
+                            : (isDark
+                                ? Colors.white.withOpacity(.06)
+                                : Colors.black.withOpacity(.05)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${entry.key} ${users.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isMe
+                              ? Colors.white
+                              : (isDark ? Colors.white : Colors.black87),
+                          fontFamily: 'Google Sans Flex',
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+).firstMatch(line);
+      final bullet = RegExp(r'^\\s*[-*+]\\s+(.*)
+    Map<String, dynamic> msg,
+    bool isMe,
+    bool isDark,
+  ) {
+    final deleted = msg['deleted_at'] != null;
+    final reply = _messageById(msg['reply_to_message_id']?.toString());
+    final rawReactions = msg['reactions'];
+    final reactions = rawReactions is Map
+        ? Map<String, dynamic>.from(rawReactions)
+        : <String, dynamic>{};
+
+    final incomingColor =
+        isDark ? const Color(0xFF111722) : Colors.white.withOpacity(.78);
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * .75,
+        ),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? _accentBlue : incomingColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: Radius.circular(isMe ? 20 : 5),
+            bottomRight: Radius.circular(isMe ? 5 : 20),
+          ),
+          border: Border.all(
+            color: isMe
+                ? Colors.white.withOpacity(.10)
+                : (isDark ? Colors.white12 : Colors.white),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? .10 : .06),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (reply != null && !deleted)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isMe
+                      ? Colors.white.withOpacity(.15)
+                      : (isDark
+                          ? Colors.white.withOpacity(.06)
+                          : Colors.black.withOpacity(.05)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  reply['text']?.toString().isNotEmpty == true
+                      ? reply['text'].toString()
+                      : 'Attachment',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isMe
+                        ? Colors.white70
+                        : (isDark ? Colors.white60 : Colors.black54),
+                    fontSize: 12,
+                    fontFamily: 'Google Sans Flex',
+                  ),
+                ),
+              ),
+            if (deleted)
+              Text(
+                'Message deleted',
+                style: TextStyle(
+                  color: isMe
+                      ? Colors.white70
+                      : (isDark ? Colors.white38 : Colors.black45),
+                  fontStyle: FontStyle.italic,
+                  fontFamily: 'Google Sans Flex',
+                ),
+              )
+            else ...[
+              if (msg['attachment_url']?.toString().isNotEmpty == true)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    msg['attachment_url'].toString(),
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              if (msg['attachment_url']?.toString().isNotEmpty == true &&
+                  msg['text']?.toString().isNotEmpty == true)
+                const SizedBox(height: 8),
+              if (msg['text']?.toString().isNotEmpty == true)
+                _buildMarkdownMessage(
+                  msg['text'].toString(),
+                  isMe
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
+                    h1: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    h2: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    h3: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    strong: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    em: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontStyle: FontStyle.italic,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    listBullet: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontSize: 15,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                    code: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              if (msg['edited_at'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'edited',
+                    style: TextStyle(
+                      color: isMe
+                          ? Colors.white60
+                          : (isDark ? Colors.white38 : Colors.black45),
+                      fontSize: 10,
+                      fontFamily: 'Google Sans Flex',
+                    ),
+                  ),
+                ),
+            ],
+            if (reactions.isNotEmpty && !deleted)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 4,
+                  children: reactions.entries.map((entry) {
+                    final users =
+                        entry.value is List ? entry.value as List : const [];
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isMe
+                            ? Colors.white.withOpacity(.18)
+                            : (isDark
+                                ? Colors.white.withOpacity(.06)
+                                : Colors.black.withOpacity(.05)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${entry.key} ${users.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isMe
+                              ? Colors.white
+                              : (isDark ? Colors.white : Colors.black87),
+                          fontFamily: 'Google Sans Flex',
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+).firstMatch(line);
+      if (heading != null) {
+        final level = heading.group(1)!.length;
+        final size = level == 1 ? 21.0 : level == 2 ? 18.0 : 16.0;
+        spans.add(TextSpan(
+          text: heading.group(2)! + '\\n',
+          style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.35),
+        ));
+      } else if (bullet != null) {
+        spans.add(TextSpan(
+          text: '• ' + bullet.group(1)! + '\\n',
+          style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4),
+        ));
+      } else {
+        spans.addAll(_markdownInlineSpans(line, color));
+        if (i < lines.length - 1) spans.add(const TextSpan(text: '\\n'));
+      }
+    }
+    return SelectableText.rich(TextSpan(children: spans));
+  }
+
+  List<InlineSpan> _markdownInlineSpans(String text, Color color) {
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(r'(\\*\\*.*?\\*\\*|\\*.*?\\*)');
+    var last = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start), style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4)));
+      }
+      final token = match.group(0)!;
+      if (token.startsWith('**')) {
+        spans.add(TextSpan(text: token.substring(2, token.length - 2), style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.4)));
+      } else {
+        spans.add(TextSpan(text: token.substring(1, token.length - 1), style: TextStyle(color: color, fontSize: 15, fontStyle: FontStyle.italic, fontFamily: 'Google Sans Flex', height: 1.4)));
+      }
+      last = match.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last), style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4)));
+    }
+    return spans;
   }
 
   Widget _buildMessageBubble(
@@ -652,7 +1131,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? Colors.white70
                         : (isDark ? Colors.white60 : Colors.black54),
                     fontSize: 12,
-                    fontFamily: InspiroUi.systemFont,
+                    fontFamily: 'Google Sans Flex',
                   ),
                 ),
               ),
@@ -664,7 +1143,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? Colors.white70
                       : (isDark ? Colors.white38 : Colors.black45),
                   fontStyle: FontStyle.italic,
-                  fontFamily: InspiroUi.systemFont,
+                  fontFamily: 'Google Sans Flex',
                 ),
               )
             else ...[
@@ -682,25 +1161,19 @@ class _ChatScreenState extends State<ChatScreen> {
                   msg['text']?.toString().isNotEmpty == true)
                 const SizedBox(height: 8),
               if (msg['text']?.toString().isNotEmpty == true)
-                MarkdownBody(
-                  data: msg['text'].toString(),
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 15,
-                      fontFamily: InspiroUi.systemFont,
-                      height: 1.35,
-                    ),
+                _buildMarkdownMessage(
+                  msg['text'].toString(),
+                  isMe
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
                     h1: TextStyle(
                       color: isMe
                           ? Colors.white
                           : (isDark ? Colors.white : Colors.black87),
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     h2: TextStyle(
                       color: isMe
@@ -708,7 +1181,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           : (isDark ? Colors.white : Colors.black87),
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     h3: TextStyle(
                       color: isMe
@@ -716,28 +1189,28 @@ class _ChatScreenState extends State<ChatScreen> {
                           : (isDark ? Colors.white : Colors.black87),
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     strong: TextStyle(
                       color: isMe
                           ? Colors.white
                           : (isDark ? Colors.white : Colors.black87),
                       fontWeight: FontWeight.w800,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     em: TextStyle(
                       color: isMe
                           ? Colors.white
                           : (isDark ? Colors.white : Colors.black87),
                       fontStyle: FontStyle.italic,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     listBullet: TextStyle(
                       color: isMe
                           ? Colors.white
                           : (isDark ? Colors.white : Colors.black87),
                       fontSize: 15,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                     code: TextStyle(
                       color: isMe
@@ -758,7 +1231,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? Colors.white60
                           : (isDark ? Colors.white38 : Colors.black45),
                       fontSize: 10,
-                      fontFamily: InspiroUi.systemFont,
+                      fontFamily: 'Google Sans Flex',
                     ),
                   ),
                 ),
@@ -791,7 +1264,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           color: isMe
                               ? Colors.white
                               : (isDark ? Colors.white : Colors.black87),
-                          fontFamily: InspiroUi.systemFont,
+                          fontFamily: 'Google Sans Flex',
                         ),
                       ),
                     );
