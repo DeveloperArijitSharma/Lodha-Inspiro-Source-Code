@@ -28,6 +28,10 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   _SortMode _sort = _SortMode.newest;
   bool _loading = true;
   bool _organizing = false;
+  bool _uploading = false;
+  String _uploadingFileName = '';
+  double _uploadProgress = 0;
+  int _uploadedCount = 0;
 
   @override
   void initState() {
@@ -186,7 +190,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       context: context,
       builder: (sheetContext) => CupertinoActionSheet(
         title: const Text('Add to File Manager'),
-        message: const Text('The system picker can show Drive, OneDrive and other installed file providers.'),
+        message: const Text(
+          'The system picker can show Drive, OneDrive and other installed file providers.',
+        ),
         actions: [
           CupertinoActionSheetAction(
             onPressed: () => Navigator.pop(sheetContext, 'files'),
@@ -210,17 +216,47 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
     try {
       if (choice == 'files') {
-        await _service.importFromDevice(folderId: _folderId);
+        _beginUploadUi();
+        await _service.importFromDevice(
+          folderId: _folderId,
+          onProgress: _handleUploadProgress,
+        );
         await _refresh();
       } else if (choice == 'gallery') {
-        await _service.importImagesFromGallery(folderId: _folderId);
+        _beginUploadUi();
+        await _service.importImagesFromGallery(
+          folderId: _folderId,
+          onProgress: _handleUploadProgress,
+        );
         await _refresh();
       } else if (choice == 'folder') {
         await _createFolder();
       }
     } catch (e) {
       _toast('Import failed: $e', error: true);
+    } finally {
+      if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  void _beginUploadUi() {
+    if (!mounted) return;
+    setState(() {
+      _uploading = true;
+      _uploadingFileName = 'Preparing upload…';
+      _uploadProgress = 0;
+      _uploadedCount = 0;
+    });
+  }
+
+  void _handleUploadProgress(String name, double progress) {
+    if (!mounted) return;
+    setState(() {
+      _uploading = true;
+      _uploadingFileName = name;
+      _uploadProgress = progress.clamp(0.0, 1.0);
+      if (_uploadProgress >= 1) _uploadedCount++;
+    });
   }
 
   Future<void> _openFolder(Map<String, dynamic> folder) async {
@@ -496,7 +532,17 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                   ),
                   const SizedBox(height: 16),
                   _GlassSearch(controller: _search, dark: dark),
-                  const SizedBox(height: 8),
+
+                   if (_uploading) ...[
+                     _UploadProgressCard(
+                       fileName: _uploadingFileName,
+                       progress: _uploadProgress,
+                       uploadedCount: _uploadedCount,
+                       dark: dark,
+                       foreground: foreground,
+                     ),
+                     const SizedBox(height: 12),
+                   ],                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -816,6 +862,95 @@ class _GlassSearch extends StatelessWidget {
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 16),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UploadProgressCard extends StatelessWidget {
+  final String fileName;
+  final double progress;
+  final int uploadedCount;
+  final bool dark;
+  final Color foreground;
+
+  const _UploadProgressCard({
+    required this.fileName,
+    required this.progress,
+    required this.uploadedCount,
+    required this.dark,
+    required this.foreground,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (progress * 100).round();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withOpacity(.08) : Colors.white.withOpacity(.76),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: dark ? Colors.white.withOpacity(.12) : Colors.white,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    CupertinoIcons.cloud_upload,
+                    color: Color(0xFF4B8DFF),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foreground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$percent%',
+                    style: TextStyle(
+                      color: foreground,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 7,
+                  backgroundColor: dark ? Colors.white12 : Colors.black12,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                progress >= 1
+                    ? 'Uploaded • AI processing can continue in the background'
+                    : 'Uploading…',
+                style: TextStyle(
+                  color: dark ? Colors.white60 : Colors.black54,
+                  fontSize: 11.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),
