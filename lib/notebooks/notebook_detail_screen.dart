@@ -1058,13 +1058,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildMarkdownMessage(String markdown, Color color) {
-    final lines = markdown.replaceAll('\r\n', '\n').split('\n');
-    final spans = <InlineSpan>[];
-
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\s+(.*)ChatMessage msg, bool isDark, Color textColor) {
+  Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
     final isUser = msg.isUser;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1088,10 +1082,17 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                 bottomRight: Radius.circular(isUser ? 4 : 20),
               ),
             ),
-            child: _buildMarkdownMessage(
-              msg.text,
-              isUser ? Colors.white : textColor,
-            ),
+            child: isUser
+                ? Text(
+                    msg.text,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Google Sans Flex',
+                      fontSize: 14.5,
+                      height: 1.4,
+                    ),
+                  )
+                : _buildMarkdownMessage(msg.text, textColor),
           ),
           if (!isUser)
             Padding(
@@ -1119,7 +1120,13 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildTypingBubble(bool isDark) {
+  Widget _buildMarkdownMessage(String markdown, Color color) {
+    final lines = markdown.replaceAll('\\r\\n', '\\n').split('\\n');
+    final spans = <InlineSpan>[];
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final heading = RegExp(r'^(#{1,3})\\s+(.*)
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -1561,62 +1568,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 }
 ).firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.*)ChatMessage msg, bool isDark, Color textColor) {
-    final isUser = msg.isUser;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment:
-            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.78),
-            decoration: BoxDecoration(
-              color: isUser
-                  ? _accentBlue
-                  : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(isUser ? 20 : 4),
-                bottomRight: Radius.circular(isUser ? 4 : 20),
-              ),
-            ),
-            child: _buildMarkdownMessage(
-              msg.text,
-              isUser ? Colors.white : textColor,
-            ),
-          ),
-          if (!isUser)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 12),
-              child: GestureDetector(
-                onTap: () => _saveMessageAsNote(msg),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bookmark_add_outlined,
-                        size: 14,
-                        color: isDark ? Colors.white38 : Colors.black38),
-                    const SizedBox(width: 4),
-                    Text('Save as note',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                            fontFamily: 'Google Sans Flex')),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingBubble(bool isDark) {
+      final bullet = RegExp(r'^\\s*[-*+]\\s+(.*)
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -2088,7 +2040,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       }
 
       if (i < lines.length - 1) {
-        spans.add(const TextSpan(text: '\n'));
+        spans.add(const TextSpan(text: '\\n'));
       }
     }
 
@@ -2097,7 +2049,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
 
   List<InlineSpan> _markdownInlineSpans(String text, Color color) {
     final spans = <InlineSpan>[];
-    final pattern = RegExp(r'(\*\*.*?\*\*|\*.*?\*)');
+    final pattern = RegExp(r'(\\*\\*.*?\\*\\*|\\*.*?\\*)');
     var last = 0;
 
     for (final match in pattern.allMatches(text)) {
@@ -2137,7 +2089,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
           ),
         ));
       }
-
       last = match.end;
     }
 
@@ -2152,63 +2103,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
         ),
       ));
     }
-
     return spans;
-  }
-
-  Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
-    final isUser = msg.isUser;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment:
-            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.78),
-            decoration: BoxDecoration(
-              color: isUser
-                  ? _accentBlue
-                  : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(isUser ? 20 : 4),
-                bottomRight: Radius.circular(isUser ? 4 : 20),
-              ),
-            ),
-            child: _buildMarkdownMessage(
-              msg.text,
-              isUser ? Colors.white : textColor,
-            ),
-          ),
-          if (!isUser)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 12),
-              child: GestureDetector(
-                onTap: () => _saveMessageAsNote(msg),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bookmark_add_outlined,
-                        size: 14,
-                        color: isDark ? Colors.white38 : Colors.black38),
-                    const SizedBox(width: 4),
-                    Text('Save as note',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                            fontFamily: 'Google Sans Flex')),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
   Widget _buildTypingBubble(bool isDark) {
