@@ -586,7 +586,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\s+(.*)    Map<String, dynamic> msg,
+      final heading = RegExp(r'^(#{1,3})\s+(.*)
+    Map<String, dynamic> msg,
     bool isMe,
     bool isDark,
   ) {
@@ -748,7 +749,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 ).firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.*)    Map<String, dynamic> msg,
+      final bullet = RegExp(r'^\s*[-*+]\s+(.*)
+    Map<String, dynamic> msg,
     bool isMe,
     bool isDark,
   ) {
