@@ -16,6 +16,7 @@ import 'notebook_models.dart';
 import 'notebook_quiz_screen.dart';
 import 'notebook_repository.dart';
 import 'note_export_service.dart';
+import '../file_manager/file_manager_service.dart';
 
 const _accentBlue = Color(0xFF32C5FF);
 final _uuid = Uuid();
@@ -194,6 +195,34 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 
   Future<void> _addFileSource() async {
+    final choice = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (sheetContext) => CupertinoActionSheet(
+        title: const Text('Add source'),
+        message: const Text('Choose a new file or a file already in File Manager.'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(sheetContext, 'device'),
+            child: const Text('From device'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(sheetContext, 'file_manager'),
+            child: const Text('From File Manager'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(sheetContext),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+
+    if (choice == 'file_manager') {
+      await _addFileManagerSource();
+      return;
+    }
+    if (choice != 'device') return;
+
     final result = await FilePicker.platform.pickFiles(
       withData: true,
       type: FileType.custom,
@@ -216,6 +245,77 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       base64Data: text ? null : base64Encode(bytes),
       createdAt: DateTime.now(),
     ));
+  }
+
+  Future<void> _addFileManagerSource() async {
+    try {
+      final files = await FileManagerService.instance.listAllFiles();
+      final supported = files.where((file) {
+        final extension = file['extension']?.toString().toLowerCase() ?? '';
+        return {'pdf', 'txt', 'md'}.contains(extension);
+      }).toList();
+
+      if (!mounted) return;
+      if (supported.isEmpty) {
+        _toast('No PDF, TXT, or Markdown files are available in File Manager.');
+        return;
+      }
+
+      final selected = await showModalBottomSheet<Map<String, dynamic>>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => SafeArea(
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * .72,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+              itemCount: supported.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final file = supported[index];
+                final ext = file['extension']?.toString().toUpperCase() ?? '';
+                return ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  tileColor: Colors.black.withOpacity(.04),
+                  leading: const Icon(
+                    CupertinoIcons.doc_text_fill,
+                    color: _accentBlue,
+                  ),
+                  title: Text(
+                    file['name']?.toString() ?? 'Untitled',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(ext + ' • File Manager'),
+                  trailing: const Icon(CupertinoIcons.chevron_right, size: 17),
+                  onTap: () => Navigator.pop(sheetContext, file),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      if (selected == null || !mounted) return;
+      _toast('Adding ' + (selected['name']?.toString() ?? 'file') + ' from File Manager...');
+      final saved = await _repo.addFileManagerSource(widget.notebook.id, selected);
+      if (!mounted) return;
+      setState(() => _sources.add(saved));
+      _toast('Source added from File Manager.');
+      _loadSuggestions();
+    } catch (e) {
+      _toast('Could not add that File Manager source: ' + e.toString(), error: true);
+    }
   }
 
   Future<void> _persistSource(NotebookSource source) async {
