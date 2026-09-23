@@ -1058,7 +1058,13 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
+  Widget _buildMarkdownMessage(String markdown, Color color) {
+    final lines = markdown.replaceAll('\r\n', '\n').split('\n');
+    final spans = <InlineSpan>[];
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final heading = RegExp(r'^(#{1,3})\s+(.*)
     final isUser = msg.isUser;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1085,46 +1091,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
             child: _buildMarkdownMessage(
               msg.text,
               isUser ? Colors.white : textColor,
-            ),
-                h1: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                ),
-                h2: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-                h3: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-                strong: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontWeight: FontWeight.w800,
-                ),
-                em: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontStyle: FontStyle.italic,
-                ),
-                listBullet: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'Google Sans Flex',
-                  fontSize: 14.5,
-                ),
-                code: TextStyle(
-                  color: isUser ? Colors.white : textColor,
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                ),
-              ),
             ),
           ),
           if (!isUser)
@@ -1153,12 +1119,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildMarkdownMessage(String markdown, Color color) {
-    final lines = markdown.replaceAll('\\r\\n', '\\n').split('\\n');
-    final spans = <InlineSpan>[];
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\\s+(.*)
+  Widget _buildTypingBubble(bool isDark) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -1600,7 +1561,62 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 }
 ).firstMatch(line);
-      final bullet = RegExp(r'^\\s*[-*+]\\s+(.*)
+      final bullet = RegExp(r'^\s*[-*+]\s+(.*)
+    final isUser = msg.isUser;
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.78),
+            decoration: BoxDecoration(
+              color: isUser
+                  ? _accentBlue
+                  : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isUser ? 20 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 20),
+              ),
+            ),
+            child: _buildMarkdownMessage(
+              msg.text,
+              isUser ? Colors.white : textColor,
+            ),
+          ),
+          if (!isUser)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12),
+              child: GestureDetector(
+                onTap: () => _saveMessageAsNote(msg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bookmark_add_outlined,
+                        size: 14,
+                        color: isDark ? Colors.white38 : Colors.black38),
+                    const SizedBox(width: 4),
+                    Text('Save as note',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                            fontFamily: 'Google Sans Flex')),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypingBubble(bool isDark) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -2042,46 +2058,113 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 }
 ).firstMatch(line);
+
       if (heading != null) {
         final level = heading.group(1)!.length;
-        final size = level == 1 ? 20.0 : level == 2 ? 17.5 : 16.0;
+        final size = level == 1 ? 20.0 : (level == 2 ? 17.5 : 15.5);
         spans.add(TextSpan(
-          text: heading.group(2)! + '\\n',
+          text: heading.group(2)!,
           style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.35),
         ));
       } else if (bullet != null) {
-        spans.add(TextSpan(
-          text: '• ' + bullet.group(1)! + '\\n',
-          style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4),
-        ));
+        spans.add(TextSpan(text: '• ', style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
+        spans.addAll(_markdownInlineSpans(bullet.group(1)!, color));
       } else {
         spans.addAll(_markdownInlineSpans(line, color));
-        if (i < lines.length - 1) spans.add(const TextSpan(text: '\\n'));
       }
+
+      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
     }
+
     return SelectableText.rich(TextSpan(children: spans));
   }
 
   List<InlineSpan> _markdownInlineSpans(String text, Color color) {
     final spans = <InlineSpan>[];
-    final pattern = RegExp(r'(\\*\\*.*?\\*\\*|\\*.*?\\*)');
+    final pattern = RegExp(r'(\*\*.*?\*\*|\*.*?\*)');
     var last = 0;
+
     for (final match in pattern.allMatches(text)) {
       if (match.start > last) {
         spans.add(TextSpan(text: text.substring(last, match.start), style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
       }
+
       final token = match.group(0)!;
-      if (token.startsWith('**')) {
-        spans.add(TextSpan(text: token.substring(2, token.length - 2), style: TextStyle(color: color, fontSize: 14.5, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.4)));
-      } else {
-        spans.add(TextSpan(text: token.substring(1, token.length - 1), style: TextStyle(color: color, fontSize: 14.5, fontStyle: FontStyle.italic, fontFamily: 'Google Sans Flex', height: 1.4)));
-      }
+      spans.add(TextSpan(
+        text: token.startsWith('**') && token.endsWith('**')
+            ? token.substring(2, token.length - 2)
+            : token.substring(1, token.length - 1),
+        style: TextStyle(
+          color: color,
+          fontSize: 14.5,
+          fontWeight: token.startsWith('**') ? FontWeight.w800 : FontWeight.normal,
+          fontStyle: token.startsWith('**') ? FontStyle.normal : FontStyle.italic,
+          fontFamily: 'Google Sans Flex',
+          height: 1.4,
+        ),
+      ));
       last = match.end;
     }
+
     if (last < text.length) {
       spans.add(TextSpan(text: text.substring(last), style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
     }
     return spans;
+  }
+
+  Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
+    final isUser = msg.isUser;
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.78),
+            decoration: BoxDecoration(
+              color: isUser
+                  ? _accentBlue
+                  : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isUser ? 20 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 20),
+              ),
+            ),
+            child: _buildMarkdownMessage(
+              msg.text,
+              isUser ? Colors.white : textColor,
+            ),
+          ),
+          if (!isUser)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12),
+              child: GestureDetector(
+                onTap: () => _saveMessageAsNote(msg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bookmark_add_outlined,
+                        size: 14,
+                        color: isDark ? Colors.white38 : Colors.black38),
+                    const SizedBox(width: 4),
+                    Text('Save as note',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                            fontFamily: 'Google Sans Flex')),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTypingBubble(bool isDark) {
