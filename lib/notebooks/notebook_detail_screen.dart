@@ -1064,7 +1064,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\s+(.*)
+      final heading = RegExp(r'^(#{1,3})\s+(.*)ChatMessage msg, bool isDark, Color textColor) {
     final isUser = msg.isUser;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1561,7 +1561,7 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 }
 ).firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.*)
+      final bullet = RegExp(r'^\s*[-*+]\s+(.*)ChatMessage msg, bool isDark, Color textColor) {
     final isUser = msg.isUser;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -2064,16 +2064,32 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
         final size = level == 1 ? 20.0 : (level == 2 ? 17.5 : 15.5);
         spans.add(TextSpan(
           text: heading.group(2)!,
-          style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.35),
+          style: TextStyle(
+            color: color,
+            fontSize: size,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Google Sans Flex',
+            height: 1.35,
+          ),
         ));
       } else if (bullet != null) {
-        spans.add(TextSpan(text: '• ', style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
+        spans.add(TextSpan(
+          text: '• ',
+          style: TextStyle(
+            color: color,
+            fontSize: 14.5,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
         spans.addAll(_markdownInlineSpans(bullet.group(1)!, color));
       } else {
         spans.addAll(_markdownInlineSpans(line, color));
       }
 
-      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
     }
 
     return SelectableText.rich(TextSpan(children: spans));
@@ -2086,29 +2102,57 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
 
     for (final match in pattern.allMatches(text)) {
       if (match.start > last) {
-        spans.add(TextSpan(text: text.substring(last, match.start), style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
+        spans.add(TextSpan(
+          text: text.substring(last, match.start),
+          style: TextStyle(
+            color: color,
+            fontSize: 14.5,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
       }
 
       final token = match.group(0)!;
-      spans.add(TextSpan(
-        text: token.startsWith('**') && token.endsWith('**')
-            ? token.substring(2, token.length - 2)
-            : token.substring(1, token.length - 1),
-        style: TextStyle(
-          color: color,
-          fontSize: 14.5,
-          fontWeight: token.startsWith('**') ? FontWeight.w800 : FontWeight.normal,
-          fontStyle: token.startsWith('**') ? FontStyle.normal : FontStyle.italic,
-          fontFamily: 'Google Sans Flex',
-          height: 1.4,
-        ),
-      ));
+      if (token.startsWith('**') && token.endsWith('**')) {
+        spans.add(TextSpan(
+          text: token.substring(2, token.length - 2),
+          style: TextStyle(
+            color: color,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
+      } else if (token.length >= 2) {
+        spans.add(TextSpan(
+          text: token.substring(1, token.length - 1),
+          style: TextStyle(
+            color: color,
+            fontSize: 14.5,
+            fontStyle: FontStyle.italic,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
+      }
+
       last = match.end;
     }
 
     if (last < text.length) {
-      spans.add(TextSpan(text: text.substring(last), style: TextStyle(color: color, fontSize: 14.5, fontFamily: 'Google Sans Flex', height: 1.4)));
+      spans.add(TextSpan(
+        text: text.substring(last),
+        style: TextStyle(
+          color: color,
+          fontSize: 14.5,
+          fontFamily: 'Google Sans Flex',
+          height: 1.4,
+        ),
+      ));
     }
+
     return spans;
   }
 
