@@ -581,12 +581,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMarkdownMessage(String markdown, Color color) {
-    final lines = markdown.replaceAll('\\r\\n', '\\n').split('\\n');
+    final lines = markdown.replaceAll('\r\n', '\n').split('\n');
     final spans = <InlineSpan>[];
+
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\\s+(.*)
-    Map<String, dynamic> msg,
+      final heading = RegExp(r'^(#{1,3})\s+(.*)    Map<String, dynamic> msg,
     bool isMe,
     bool isDark,
   ) {
@@ -691,60 +691,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? Colors.white
                       : (isDark ? Colors.white : Colors.black87),
                 ),
-                    h1: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h2: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h3: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    strong: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    em: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontStyle: FontStyle.italic,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    listBullet: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 15,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    code: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
               if (msg['edited_at'] != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -802,8 +748,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 ).firstMatch(line);
-      final bullet = RegExp(r'^\\s*[-*+]\\s+(.*)
-    Map<String, dynamic> msg,
+      final bullet = RegExp(r'^\s*[-*+]\s+(.*)    Map<String, dynamic> msg,
     bool isMe,
     bool isDark,
   ) {
@@ -908,60 +853,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? Colors.white
                       : (isDark ? Colors.white : Colors.black87),
                 ),
-                    h1: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h2: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h3: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    strong: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    em: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontStyle: FontStyle.italic,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    listBullet: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 15,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    code: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
               if (msg['edited_at'] != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -1019,45 +910,101 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 ).firstMatch(line);
+
       if (heading != null) {
         final level = heading.group(1)!.length;
-        final size = level == 1 ? 21.0 : level == 2 ? 18.0 : 16.0;
+        final size = level == 1 ? 21.0 : (level == 2 ? 18.0 : 16.0);
         spans.add(TextSpan(
-          text: heading.group(2)! + '\\n',
-          style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.35),
+          text: heading.group(2)!,
+          style: TextStyle(
+            color: color,
+            fontSize: size,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Google Sans Flex',
+            height: 1.35,
+          ),
         ));
       } else if (bullet != null) {
         spans.add(TextSpan(
-          text: '• ' + bullet.group(1)! + '\\n',
-          style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4),
+          text: '• ',
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
         ));
+        spans.addAll(_markdownInlineSpans(bullet.group(1)!, color));
       } else {
         spans.addAll(_markdownInlineSpans(line, color));
-        if (i < lines.length - 1) spans.add(const TextSpan(text: '\\n'));
+      }
+
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
       }
     }
+
     return SelectableText.rich(TextSpan(children: spans));
   }
 
   List<InlineSpan> _markdownInlineSpans(String text, Color color) {
     final spans = <InlineSpan>[];
-    final pattern = RegExp(r'(\\*\\*.*?\\*\\*|\\*.*?\\*)');
+    final pattern = RegExp(r'(\*\*.*?\*\*|\*.*?\*)');
     var last = 0;
+
     for (final match in pattern.allMatches(text)) {
       if (match.start > last) {
-        spans.add(TextSpan(text: text.substring(last, match.start), style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4)));
+        spans.add(TextSpan(
+          text: text.substring(last, match.start),
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
       }
+
       final token = match.group(0)!;
-      if (token.startsWith('**')) {
-        spans.add(TextSpan(text: token.substring(2, token.length - 2), style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w800, fontFamily: 'Google Sans Flex', height: 1.4)));
-      } else {
-        spans.add(TextSpan(text: token.substring(1, token.length - 1), style: TextStyle(color: color, fontSize: 15, fontStyle: FontStyle.italic, fontFamily: 'Google Sans Flex', height: 1.4)));
+      if (token.startsWith('**') && token.endsWith('**')) {
+        spans.add(TextSpan(
+          text: token.substring(2, token.length - 2),
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
+      } else if (token.length >= 2) {
+        spans.add(TextSpan(
+          text: token.substring(1, token.length - 1),
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontStyle: FontStyle.italic,
+            fontFamily: 'Google Sans Flex',
+            height: 1.4,
+          ),
+        ));
       }
+
       last = match.end;
     }
+
     if (last < text.length) {
-      spans.add(TextSpan(text: text.substring(last), style: TextStyle(color: color, fontSize: 15, fontFamily: 'Google Sans Flex', height: 1.4)));
+      spans.add(TextSpan(
+        text: text.substring(last),
+        style: TextStyle(
+          color: color,
+          fontSize: 15,
+          fontFamily: 'Google Sans Flex',
+          height: 1.4,
+        ),
+      ));
     }
+
     return spans;
   }
 
@@ -1166,60 +1113,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   isMe
                       ? Colors.white
                       : (isDark ? Colors.white : Colors.black87),
-                ),
-                    h1: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h2: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    h3: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    strong: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    em: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontStyle: FontStyle.italic,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    listBullet: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontSize: 15,
-                      fontFamily: 'Google Sans Flex',
-                    ),
-                    code: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                    ),
-                  ),
                 ),
               if (msg['edited_at'] != null)
                 Padding(
