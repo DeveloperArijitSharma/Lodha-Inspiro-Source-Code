@@ -950,6 +950,97 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
+  Widget _buildMarkdownMessage(String markdown, Color color) {
+    final lines = markdown.replaceAll('\r\n', '\n').split('\n');
+    final spans = <InlineSpan>[];
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final heading = RegExp(r'^(#{1,3})\s+(.*)$').firstMatch(line);
+      final bullet = RegExp(r'^\s*[-*+]\s+(.*)$').firstMatch(line);
+
+      if (heading != null) {
+        final level = heading.group(1)!.length;
+        spans.add(TextSpan(
+          text: heading.group(2),
+          style: TextStyle(
+            color: color,
+            fontFamily: 'Google Sans Flex',
+            fontSize: level == 1 ? 20 : level == 2 ? 18 : 16,
+            fontWeight: FontWeight.w800,
+            height: 1.35,
+          ),
+        ));
+      } else if (bullet != null) {
+        spans.add(TextSpan(
+          text: '• ' + (bullet.group(1) ?? ''),
+          style: TextStyle(
+            color: color,
+            fontFamily: 'Google Sans Flex',
+            fontSize: 14.5,
+            height: 1.45,
+          ),
+        ));
+      } else {
+        spans.addAll(_markdownInlineSpans(line, color));
+      }
+
+      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
+    }
+
+    return RichText(text: TextSpan(children: spans));
+  }
+
+  List<InlineSpan> _markdownInlineSpans(String text, Color color) {
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(r'(\*\*.*?\*\*|\*.*?\*)');
+    var last = 0;
+
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(
+          text: text.substring(last, match.start),
+          style: TextStyle(
+            color: color,
+            fontFamily: 'Google Sans Flex',
+            fontSize: 14.5,
+            height: 1.45,
+          ),
+        ));
+      }
+
+      final token = match.group(0)!;
+      final isBold = token.startsWith('**');
+      final inner = isBold ? token.substring(2, token.length - 2) : token.substring(1, token.length - 1);
+
+      spans.add(TextSpan(
+        text: inner,
+        style: TextStyle(
+          color: color,
+          fontFamily: 'Google Sans Flex',
+          fontSize: 14.5,
+          height: 1.45,
+          fontWeight: isBold ? FontWeight.w800 : FontWeight.normal,
+          fontStyle: isBold ? FontStyle.normal : FontStyle.italic,
+        ),
+      ));
+      last = match.end;
+    }
+
+    if (last < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(last),
+        style: TextStyle(
+          color: color,
+          fontFamily: 'Google Sans Flex',
+          fontSize: 14.5,
+          height: 1.45,
+        ),
+      ));
+    }
+    return spans;
+  }
+
   Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
     final isUser = msg.isUser;
     return Align(
@@ -974,14 +1065,9 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                 bottomRight: Radius.circular(isUser ? 4 : 20),
               ),
             ),
-            child: Text(
+            child: _buildMarkdownMessage(
               msg.text,
-              style: TextStyle(
-                color: isUser ? Colors.white : textColor,
-                fontFamily: 'Google Sans Flex',
-                fontSize: 14.5,
-                height: 1.4,
-              ),
+              isUser ? Colors.white : textColor,
             ),
           ),
           if (!isUser)
