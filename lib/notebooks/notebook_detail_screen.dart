@@ -4,7 +4,6 @@ import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:uuid/uuid.dart';
@@ -17,7 +16,6 @@ import 'notebook_models.dart';
 import 'notebook_quiz_screen.dart';
 import 'notebook_repository.dart';
 import 'note_export_service.dart';
-import '../file_manager/file_manager_service.dart';
 
 const _accentBlue = Color(0xFF32C5FF);
 final _uuid = Uuid();
@@ -196,34 +194,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
   }
 
   Future<void> _addFileSource() async {
-    final choice = await showCupertinoModalPopup<String>(
-      context: context,
-      builder: (sheetContext) => CupertinoActionSheet(
-        title: const Text('Add source'),
-        message: const Text('Choose a new file or a file already in File Manager.'),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(sheetContext, 'device'),
-            child: const Text('From device'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(sheetContext, 'file_manager'),
-            child: const Text('From File Manager'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(sheetContext),
-          child: const Text('Cancel'),
-        ),
-      ),
-    );
-
-    if (choice == 'file_manager') {
-      await _addFileManagerSource();
-      return;
-    }
-    if (choice != 'device') return;
-
     final result = await FilePicker.platform.pickFiles(
       withData: true,
       type: FileType.custom,
@@ -246,77 +216,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
       base64Data: text ? null : base64Encode(bytes),
       createdAt: DateTime.now(),
     ));
-  }
-
-  Future<void> _addFileManagerSource() async {
-    try {
-      final files = await FileManagerService.instance.listAllFiles();
-      final supported = files.where((file) {
-        final extension = file['extension']?.toString().toLowerCase() ?? '';
-        return {'pdf', 'txt', 'md'}.contains(extension);
-      }).toList();
-
-      if (!mounted) return;
-      if (supported.isEmpty) {
-        _toast('No PDF, TXT, or Markdown files are available in File Manager.');
-        return;
-      }
-
-      final selected = await showModalBottomSheet<Map<String, dynamic>>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (sheetContext) => SafeArea(
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(sheetContext).size.height * .72,
-            ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-            ),
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-              itemCount: supported.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                final file = supported[index];
-                final ext = file['extension']?.toString().toUpperCase() ?? '';
-                return ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  tileColor: Colors.black.withOpacity(.04),
-                  leading: const Icon(
-                    CupertinoIcons.doc_text_fill,
-                    color: _accentBlue,
-                  ),
-                  title: Text(
-                    file['name']?.toString() ?? 'Untitled',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(ext + ' • File Manager'),
-                  trailing: const Icon(CupertinoIcons.chevron_right, size: 17),
-                  onTap: () => Navigator.pop(sheetContext, file),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      if (selected == null || !mounted) return;
-      _toast('Adding ' + (selected['name']?.toString() ?? 'file') + ' from File Manager...');
-      final saved = await _repo.addFileManagerSource(widget.notebook.id, selected);
-      if (!mounted) return;
-      setState(() => _sources.add(saved));
-      _toast('Source added from File Manager.');
-      _loadSuggestions();
-    } catch (e) {
-      _toast('Could not add that File Manager source: ' + e.toString(), error: true);
-    }
   }
 
   Future<void> _persistSource(NotebookSource source) async {
@@ -1051,97 +950,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
     );
   }
 
-  Widget _buildMarkdownMessage(String markdown, Color color) {
-    final lines = markdown.replaceAll('\r\n', '\n').split('\n');
-    final spans = <InlineSpan>[];
-
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      final heading = RegExp(r'^(#{1,3})\s+(.*)$').firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.*)$').firstMatch(line);
-
-      if (heading != null) {
-        final level = heading.group(1)!.length;
-        spans.add(TextSpan(
-          text: heading.group(2),
-          style: TextStyle(
-            color: color,
-            fontFamily: 'Google Sans Flex',
-            fontSize: level == 1 ? 20 : level == 2 ? 18 : 16,
-            fontWeight: FontWeight.w800,
-            height: 1.35,
-          ),
-        ));
-      } else if (bullet != null) {
-        spans.add(TextSpan(
-          text: '• ' + (bullet.group(1) ?? ''),
-          style: TextStyle(
-            color: color,
-            fontFamily: 'Google Sans Flex',
-            fontSize: 14.5,
-            height: 1.45,
-          ),
-        ));
-      } else {
-        spans.addAll(_markdownInlineSpans(line, color));
-      }
-
-      if (i < lines.length - 1) spans.add(const TextSpan(text: '\n'));
-    }
-
-    return RichText(text: TextSpan(children: spans));
-  }
-
-  List<InlineSpan> _markdownInlineSpans(String text, Color color) {
-    final spans = <InlineSpan>[];
-    final pattern = RegExp(r'(\*\*.*?\*\*|\*.*?\*)');
-    var last = 0;
-
-    for (final match in pattern.allMatches(text)) {
-      if (match.start > last) {
-        spans.add(TextSpan(
-          text: text.substring(last, match.start),
-          style: TextStyle(
-            color: color,
-            fontFamily: 'Google Sans Flex',
-            fontSize: 14.5,
-            height: 1.45,
-          ),
-        ));
-      }
-
-      final token = match.group(0)!;
-      final isBold = token.startsWith('**');
-      final inner = isBold ? token.substring(2, token.length - 2) : token.substring(1, token.length - 1);
-
-      spans.add(TextSpan(
-        text: inner,
-        style: TextStyle(
-          color: color,
-          fontFamily: 'Google Sans Flex',
-          fontSize: 14.5,
-          height: 1.45,
-          fontWeight: isBold ? FontWeight.w800 : FontWeight.normal,
-          fontStyle: isBold ? FontStyle.normal : FontStyle.italic,
-        ),
-      ));
-      last = match.end;
-    }
-
-    if (last < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(last),
-        style: TextStyle(
-          color: color,
-          fontFamily: 'Google Sans Flex',
-          fontSize: 14.5,
-          height: 1.45,
-        ),
-      ));
-    }
-    return spans;
-  }
-
   Widget _buildMessageBubble(ChatMessage msg, bool isDark, Color textColor) {
     final isUser = msg.isUser;
     return Align(
@@ -1166,9 +974,14 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
                 bottomRight: Radius.circular(isUser ? 4 : 20),
               ),
             ),
-            child: _buildMarkdownMessage(
+            child: Text(
               msg.text,
-              isUser ? Colors.white : textColor,
+              style: TextStyle(
+                color: isUser ? Colors.white : textColor,
+                fontFamily: 'Google Sans Flex',
+                fontSize: 14.5,
+                height: 1.4,
+              ),
             ),
           ),
           if (!isUser)
@@ -1309,16 +1122,15 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _summary?.isNotEmpty == true
-                        ? _buildMarkdownMessage(_summary!, isDark ? Colors.white70 : Colors.black87)
-                        : Text(
-                            'Generate a summary of everything in this notebook.',
-                            style: TextStyle(
-                              color: isDark ? Colors.white70 : Colors.black87,
-                              fontFamily: 'Google Sans Flex',
-                              height: 1.4,
-                            ),
-                          ),
+                    Text(
+                      _summary?.isNotEmpty == true
+                          ? _summary!
+                          : 'Generate a summary of everything in this notebook.',
+                      style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black87,
+                          fontFamily: 'Google Sans Flex',
+                          height: 1.4),
+                    ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _generateSummary,
@@ -1367,6 +1179,147 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+        _buildStudioCard(
+          isDark: isDark,
+          textColor: textColor,
+          icon: Icons.podcasts_rounded,
+          title: 'Audio Overview',
+          child: _generatingScript
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                      child: CircularProgressIndicator(color: _accentBlue)),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_audioScript == null)
+                      Text(
+                        'Generate a two-host discussion of your sources, then listen to it narrated on-device.',
+                        style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontFamily: 'Google Sans Flex',
+                            height: 1.4),
+                      ),
+                    if (_audioScript != null)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF111318)
+                              : const Color(0xFFF4F7FA),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    gradient: const LinearGradient(colors: [
+                                      Color(0xFF32C5FF),
+                                      Color(0xFF7C5CFF)
+                                    ]),
+                                  ),
+                                  child: const Icon(Icons.graphic_eq_rounded,
+                                      color: Colors.white),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                    child: Text('Two-host study discussion',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Google Sans Flex'))),
+                                IconButton(
+                                  onPressed: _toggleNarration,
+                                  icon: Icon(
+                                      _speaking
+                                          ? Icons.stop_circle_rounded
+                                          : Icons.play_circle_fill_rounded,
+                                      size: 42,
+                                      color: _accentBlue),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Slider(
+                              value: _audioProgress.clamp(0.0, 1.0),
+                              onChanged: _seekAudio,
+                              activeColor: _accentBlue,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(_audioTime(_audioProgress),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey)),
+                                Text(_audioTime(1),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Text('Live transcript',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Google Sans Flex')),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 190,
+                              child: ListView.builder(
+                                itemCount: _audioLines().length,
+                                itemBuilder: (_, i) {
+                                  final line = _audioLines()[i];
+                                  final active =
+                                      _speaking && i == _audioSpeakingLine;
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 6),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 120),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: active
+                                            ? _accentBlue.withOpacity(.12)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        line.replaceFirst(
+                                            RegExp(r'^Host [AB]:\s*',
+                                                caseSensitive: false),
+                                            ''),
+                                        style: TextStyle(
+                                            fontFamily: 'Google Sans Flex',
+                                            height: 1.35,
+                                            fontWeight: active
+                                                ? FontWeight.w600
+                                                : FontWeight.normal),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _generateAudioOverview,
+                      child: Text(
+                          _audioScript == null ? 'Generate script' : 'Regenerate'),
+                    ),
+                  ],
+                ),
         ),
         const SizedBox(height: 16),
         _buildStudioCard(
