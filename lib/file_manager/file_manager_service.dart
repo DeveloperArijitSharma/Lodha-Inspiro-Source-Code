@@ -269,7 +269,13 @@ class FileManagerService {
     await _supabase.from('file_manager_files').delete().eq('id', file['id']);
   }
 
-  Future<Uint8List> download(Map<String, dynamic> file) => _supabase.storage.from(bucket).download(file['storage_path'] as String);
+  Future<Uint8List> download(Map<String, dynamic> file) async {
+    final path = file['storage_path']?.toString();
+    if (path == null || path.isEmpty) throw StateError('This file has no storage path.');
+    final bytes = await _supabase.storage.from(bucket).download(path);
+    if (bytes.isEmpty) throw StateError('The downloaded file is empty.');
+    return bytes;
+  }
 
   Future<void> updateTextFile(Map<String, dynamic> file, String text) async {
     final extension = file['extension'] as String;
