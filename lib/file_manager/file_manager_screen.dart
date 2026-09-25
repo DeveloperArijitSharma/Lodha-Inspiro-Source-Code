@@ -392,8 +392,35 @@ class _GlassSearch extends StatelessWidget {
   final bool dark;
   const _GlassSearch({required this.controller, required this.dark});
   @override
-  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(24), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22), child: Container(decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.08) : Colors.white.withOpacity(.75), borderRadius: BorderRadius.circular(24), border: Border.all(color: dark ? Colors.white.withOpacity(.12) : Colors.white)), child: TextField(controller: controller, decoration: InputDecoration(prefixIcon: Icon(CupertinoIcons.search, color: dark ? Colors.white60 : Colors.black45), hintText: 'Search files and folders', border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 16)))));
-}
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withOpacity(.08) : Colors.white.withOpacity(.75),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: dark ? Colors.white.withOpacity(.12) : Colors.white,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              prefixIcon: Icon(
+                CupertinoIcons.search,
+                color: dark ? Colors.white60 : Colors.black45,
+              ),
+              hintText: 'Search files and folders',
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
 class _SectionTitle extends StatelessWidget {
   final String title;
