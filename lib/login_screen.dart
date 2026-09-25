@@ -25,13 +25,8 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _supabase.auth.onAuthStateChange.listen((data) {
-      if (data.session != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
+    _supabase.auth.onAuthStateChange.listen((_) {
+      if (mounted) setState(() {});
     });
   }
 
