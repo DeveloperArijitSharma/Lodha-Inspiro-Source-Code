@@ -410,9 +410,89 @@ class _FolderTile extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onRename;
   final VoidCallback onDelete;
-  const _FolderTile({required this.folder, required this.dark, required this.foreground, required this.onOpen, required this.onRename, required this.onDelete});
+
+  const _FolderTile({
+    required this.folder,
+    required this.dark,
+    required this.foreground,
+    required this.onOpen,
+    required this.onRename,
+    required this.onDelete,
+  });
+
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 9), child: ClipRRect(borderRadius: BorderRadius.circular(22), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: dark ? Colors.white.withOpacity(.065) : Colors.white.withOpacity(.78), child: InkWell(onTap: onOpen, child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFF4B8DFF).withOpacity(.14), borderRadius: BorderRadius.circular(16)), child: const Icon(CupertinoIcons.folder_fill, color: Color(0xFF4B8DFF))), const SizedBox(width: 13), Expanded(child: Text(folder['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: foreground, fontWeight: FontWeight.w700))), CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showCupertinoModalPopup(context: context, builder: (_) => CupertinoActionSheet(actions: [CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onRename(); }, child: const Text('Rename folder')), CupertinoActionSheetAction(isDestructiveAction: true, onPressed: () { Navigator.pop(context); onDelete(); }, child: const Text('Delete folder'))], cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')))), child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)))]))))));
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Material(
+            color: dark ? Colors.white.withOpacity(.065) : Colors.white.withOpacity(.78),
+            child: InkWell(
+              onTap: onOpen,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4B8DFF).withOpacity(.14),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(CupertinoIcons.folder_fill, color: Color(0xFF4B8DFF)),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Text(
+                        folder['name'].toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: foreground, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => showCupertinoModalPopup(
+                        context: context,
+                        builder: (_) => CupertinoActionSheet(
+                          actions: [
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onRename();
+                              },
+                              child: const Text('Rename folder'),
+                            ),
+                            CupertinoActionSheetAction(
+                              isDestructiveAction: true,
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onDelete();
+                              },
+                              child: const Text('Delete folder'),
+                            ),
+                          ],
+                          cancelButton: CupertinoActionSheetAction(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                      ),
+                      child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _FileTile extends StatelessWidget {
@@ -424,12 +504,147 @@ class _FileTile extends StatelessWidget {
   final VoidCallback onMove;
   final VoidCallback onRename;
   final VoidCallback onDelete;
-  const _FileTile({required this.file, required this.dark, required this.foreground, required this.onOpen, required this.onInfo, required this.onMove, required this.onRename, required this.onDelete});
+
+  const _FileTile({
+    required this.file,
+    required this.dark,
+    required this.foreground,
+    required this.onOpen,
+    required this.onInfo,
+    required this.onMove,
+    required this.onRename,
+    required this.onDelete,
+  });
+
   @override
-  Widget build(BuildContext context) { final ext = file['extension'].toString().toLowerCase(); final ai = file['ai_supported'] == true; return Padding(padding: const EdgeInsets.only(bottom: 9), child: ClipRRect(borderRadius: BorderRadius.circular(23), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: dark ? Colors.white.withOpacity(.055) : Colors.white.withOpacity(.78), child: InkWell(onTap: onOpen, child: Padding(padding: const EdgeInsets.all(13), child: Row(children: [Container(width: 50, height: 50, decoration: BoxDecoration(color: _color(ext).withOpacity(.13), borderRadius: BorderRadius.circular(16)), child: Icon(_icon(ext), color: _color(ext), size: 25)), const SizedBox(width: 13), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(file['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: foreground, fontWeight: FontWeight.w700, fontSize: 14.5)), const SizedBox(height: 5), Text('${ext.toUpperCase()} • ${_size(file['size_bytes'])}${ai ? ' • AI ready' : ''}', style: TextStyle(color: foreground.withOpacity(.5), fontSize: 11.5))])), CupertinoButton(padding: const EdgeInsets.all(6), onPressed: onInfo, child: const Icon(CupertinoIcons.info_circle, color: Color(0xFF4B8DFF), size: 21)), CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showCupertinoModalPopup(context: context, builder: (_) => CupertinoActionSheet(actions: [CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onOpen(); }, child: const Text('Open')), CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onMove(); }, child: const Text('Move to folder')), CupertinoActionSheetAction(onPressed: () { Navigator.pop(context); onRename(); }, child: const Text('Rename')), CupertinoActionSheetAction(isDestructiveAction: true, onPressed: () { Navigator.pop(context); onDelete(); }, child: const Text('Delete'))], cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')))), child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)))])))))); }
-  static IconData _icon(String ext) { if (ext == 'pdf') return CupertinoIcons.doc_text_fill; if ({'jpg','jpeg','png','gif','webp'}.contains(ext)) return CupertinoIcons.photo; if ({'mp3','wav'}.contains(ext)) return CupertinoIcons.music_note; if ({'mp4','mov'}.contains(ext)) return CupertinoIcons.film; if (ext == 'txt' || ext == 'md') return CupertinoIcons.doc_plaintext; return CupertinoIcons.doc; }
-  static Color _color(String ext) { if (ext == 'pdf') return const Color(0xFFFF5D73); if ({'jpg','jpeg','png','gif','webp'}.contains(ext)) return const Color(0xFF9A7BFF); if ({'xls','xlsx','csv'}.contains(ext)) return const Color(0xFF27B67A); return const Color(0xFF4B8DFF); }
-  static String _size(dynamic value) { final bytes = (value as num?)?.toDouble() ?? 0; if (bytes < 1024) return '${bytes.toInt()} B'; if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB'; return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'; }
+  Widget build(BuildContext context) {
+    final ext = file['extension'].toString().toLowerCase();
+    final ai = file['ai_supported'] == true;
+    final details = ext.toUpperCase() + ' • ' + _size(file['size_bytes']) + (ai ? ' • AI ready' : '');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(23),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Material(
+            color: dark ? Colors.white.withOpacity(.055) : Colors.white.withOpacity(.78),
+            child: InkWell(
+              onTap: onOpen,
+              child: Padding(
+                padding: const EdgeInsets.all(13),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: _color(ext).withOpacity(.13),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(_icon(ext), color: _color(ext), size: 25),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            file['name'].toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: foreground, fontWeight: FontWeight.w700, fontSize: 14.5),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            details,
+                            style: TextStyle(color: foreground.withOpacity(.5), fontSize: 11.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.all(6),
+                      onPressed: onInfo,
+                      child: const Icon(CupertinoIcons.info_circle, color: Color(0xFF4B8DFF), size: 21),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => showCupertinoModalPopup(
+                        context: context,
+                        builder: (_) => CupertinoActionSheet(
+                          actions: [
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onOpen();
+                              },
+                              child: const Text('Open'),
+                            ),
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onMove();
+                              },
+                              child: const Text('Move to folder'),
+                            ),
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onRename();
+                              },
+                              child: const Text('Rename'),
+                            ),
+                            CupertinoActionSheetAction(
+                              isDestructiveAction: true,
+                              onPressed: () {
+                                Navigator.pop(context);
+                                onDelete();
+                              },
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                          cancelButton: CupertinoActionSheetAction(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                      ),
+                      child: const Icon(CupertinoIcons.ellipsis_vertical, color: Color(0xFF4B8DFF)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static IconData _icon(String ext) {
+    if (ext == 'pdf') return CupertinoIcons.doc_text_fill;
+    if ({'jpg', 'jpeg', 'png', 'gif', 'webp'}.contains(ext)) return CupertinoIcons.photo;
+    if ({'mp3', 'wav'}.contains(ext)) return CupertinoIcons.music_note;
+    if ({'mp4', 'mov'}.contains(ext)) return CupertinoIcons.film;
+    if (ext == 'txt' || ext == 'md') return CupertinoIcons.doc_plaintext;
+    return CupertinoIcons.doc;
+  }
+
+  static Color _color(String ext) {
+    if (ext == 'pdf') return const Color(0xFFFF5D73);
+    if ({'jpg', 'jpeg', 'png', 'gif', 'webp'}.contains(ext)) return const Color(0xFF9A7BFF);
+    if ({'xls', 'xlsx', 'csv'}.contains(ext)) return const Color(0xFF27B67A);
+    return const Color(0xFF4B8DFF);
+  }
+
+  static String _size(dynamic value) {
+    final bytes = (value as num?)?.toDouble() ?? 0;
+    if (bytes < 1024) return bytes.toInt().toString() + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toStringAsFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toStringAsFixed(1) + ' MB';
+  }
 }
 
 class _EmptyFiles extends StatelessWidget {
