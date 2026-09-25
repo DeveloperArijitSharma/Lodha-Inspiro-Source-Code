@@ -43,8 +43,6 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isUploading = false;
   RealtimeChannel? _messageChannel;
 
-  Color get _accentBlue => _accentBlue;
-
   @override
   void initState() {
     super.initState();
