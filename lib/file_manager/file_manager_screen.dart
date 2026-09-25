@@ -421,6 +421,7 @@ class _GlassSearch extends StatelessWidget {
       ),
     );
   }
+}
 
 class _SectionTitle extends StatelessWidget {
   final String title;
