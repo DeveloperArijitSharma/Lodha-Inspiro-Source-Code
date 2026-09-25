@@ -1,10 +1,7 @@
 import 'dart:ui';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'home_screen.dart';
 
 class AuthGate extends StatefulWidget {
@@ -16,17 +13,26 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   final _supabase = Supabase.instance.client;
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final Color _accentBlue = const Color(0xFF4B8DFF);
   bool _isLoading = false;
   bool _isSignUp = false;
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  // 🚀 GLOBAL LIGHT BLUE ACCENT COLOR
+  final Color _accentBlue = const Color(0xFF32C5FF);
 
   @override
   void initState() {
     super.initState();
-    _supabase.auth.onAuthStateChange.listen((_) {
-      if (mounted) setState(() {});
+    // Setup auth state listener to automatically navigate to Home
+    _supabase.auth.onAuthStateChange.listen((data) {
+      if (data.session != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
     });
   }
 
@@ -42,7 +48,7 @@ class _AuthGateState extends State<AuthGate> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showToast('Please fill in all fields', error: true);
+      _showError('Please fill in all fields');
       return;
     }
 
@@ -54,209 +60,250 @@ class _AuthGateState extends State<AuthGate> {
         await _supabase.auth.signUp(
           email: email,
           password: password,
-          data: {'username': email.split('@').first},
+          data: {
+            'username': email.split('@')[0]
+          }, // Default username from email
         );
-        _showToast('Account created! You can now sign in.');
-        if (mounted) setState(() => _isSignUp = false);
+        _showSuccess('Account created! You can now sign in.');
+        setState(() => _isSignUp = false);
       } else {
         await _supabase.auth.signInWithPassword(
           email: email,
           password: password,
         );
+        // Successful login will trigger the onAuthStateChange listener
       }
     } on AuthException catch (e) {
-      _showToast(e.message, error: true);
-    } catch (_) {
-      _showToast('An unexpected error occurred', error: true);
+      _showError(e.message);
+    } catch (e) {
+      _showError('An unexpected error occurred');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showToast(String message, {bool error = false}) {
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(message,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
-        backgroundColor: error ? CupertinoColors.systemRed : _accentBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: _accentBlue,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // If user is already logged in, show a blank loading screen while redirecting
     if (_supabase.auth.currentSession != null) {
-      return const HomeScreen();
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: _accentBlue),
+        ),
+      );
     }
 
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final foreground = dark ? Colors.white : const Color(0xFF172033);
+    final size = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E1E1E);
 
     return Scaffold(
-      backgroundColor: dark ? const Color(0xFF080B12) : const Color(0xFFF2F5F9),
       body: Stack(
         children: [
+          // ====================================================
+          // 🎨 BACKGROUND ORBS (Makes the glass effect pop)
+          // ====================================================
           Positioned(
-            top: -150,
-            left: -120,
-            child: _orb(360, const Color(0xFF4B8DFF)),
-          ),
-          Positioned(
-            bottom: -160,
-            right: -130,
-            child: _orb(380, const Color(0xFF9A7BFF)),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-              child: Container(color: Colors.transparent),
+            top: size.height * 0.1,
+            left: -size.width * 0.2,
+            child: Container(
+              width: size.width * 0.8,
+              height: size.width * 0.8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _accentBlue.withOpacity(isDark ? 0.4 : 0.3),
+              ),
             ),
           ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(38),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
-                      decoration: BoxDecoration(
-                        color: dark
-                            ? Colors.white.withOpacity(.07)
-                            : Colors.white.withOpacity(.70),
-                        borderRadius: BorderRadius.circular(38),
-                        border: Border.all(
-                          color: dark
-                              ? Colors.white.withOpacity(.13)
-                              : Colors.white,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.08),
-                            blurRadius: 35,
-                            offset: const Offset(0, 18),
-                          ),
-                        ],
+          Positioned(
+            bottom: -size.height * 0.05,
+            right: -size.width * 0.3,
+            child: Container(
+              width: size.width * 0.9,
+              height: size.width * 0.9,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFD3B4FF)
+                    .withOpacity(isDark ? 0.3 : 0.4), // Soft purple contrast
+              ),
+            ),
+          ),
+          // Heavy blur over the background orbs
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+            child: Container(color: Colors.transparent),
+          ),
+
+          // ====================================================
+          // 🧊 LIQUID GLASS LOGIN CARD
+          // ====================================================
+          Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: size.width * 0.08),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.black.withOpacity(0.4)
+                          : Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(40),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.15)
+                            : Colors.white.withOpacity(0.8),
+                        width: 1.5,
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF4B8DFF),
-                                  Color(0xFF9A7BFF),
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _accentBlue.withOpacity(.25),
-                                  blurRadius: 30,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // App Logo / Icon
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _accentBlue.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.auto_awesome_mosaic_rounded,
+                              color: _accentBlue, size: 48),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // App Title
+                        Text(
+                          'Lodha Inspiro',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Google Sans Flex',
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _isSignUp
+                              ? 'Create your student account'
+                              : 'Welcome back, student',
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black54,
+                            fontSize: 15,
+                            fontFamily: 'Google Sans Flex',
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Glass Text Fields
+                        _buildGlassTextField(
+                          controller: _emailController,
+                          hintText: 'Email Address',
+                          icon: Icons.email_outlined,
+                          isDark: isDark,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildGlassTextField(
+                          controller: _passwordController,
+                          hintText: 'Password',
+                          icon: Icons.lock_outline_rounded,
+                          isDark: isDark,
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submitAuth,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentBlue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                              elevation: 0,
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Text(
+                                    _isSignUp ? 'Sign Up' : 'Sign In',
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Google Sans Flex'),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Toggle Mode Button
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _isSignUp = !_isSignUp);
+                          },
+                          child: RichText(
+                            text: TextSpan(
+                              text: _isSignUp
+                                  ? 'Already have an account? '
+                                  : 'Don\'t have an account? ',
+                              style: TextStyle(
+                                  color:
+                                      isDark ? Colors.white70 : Colors.black54,
+                                  fontFamily: 'Google Sans Flex'),
+                              children: [
+                                TextSpan(
+                                  text: _isSignUp ? 'Sign In' : 'Sign Up',
+                                  style: TextStyle(
+                                      color: _accentBlue,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              CupertinoIcons.sparkles,
-                              color: Colors.white,
-                              size: 34,
-                            ),
                           ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'Lodha Inspiro',
-                            style: TextStyle(
-                              color: foreground,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.7,
-                            ),
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            _isSignUp
-                                ? 'Create your student space.'
-                                : 'Your fluid study space, ready.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: foreground.withOpacity(.58),
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          _glassTextField(
-                            controller: _emailController,
-                            hint: 'Email Address',
-                            icon: CupertinoIcons.mail,
-                            dark: dark,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          const SizedBox(height: 14),
-                          _glassTextField(
-                            controller: _passwordController,
-                            hint: 'Password',
-                            icon: CupertinoIcons.lock,
-                            dark: dark,
-                            obscureText: true,
-                          ),
-                          const SizedBox(height: 22),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: CupertinoButton.filled(
-                              borderRadius: BorderRadius.circular(20),
-                              padding: EdgeInsets.zero,
-                              onPressed: _isLoading ? null : _submitAuth,
-                              child: _isLoading
-                                  ? const CupertinoActivityIndicator(
-                                      color: Colors.white,
-                                    )
-                                  : Text(
-                                      _isSignUp ? 'Sign Up' : 'Sign In',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _isSignUp = !_isSignUp);
-                            },
-                            child: Text.rich(
-                              TextSpan(
-                                text: _isSignUp
-                                    ? 'Already have an account? '
-                                    : "Don't have an account? ",
-                                style: TextStyle(
-                                  color: foreground.withOpacity(.58),
-                                  fontSize: 14,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: _isSignUp ? 'Sign In' : 'Sign Up',
-                                    style: TextStyle(
-                                      color: _accentBlue,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -268,64 +315,41 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  Widget _glassTextField({
+  // ====================================================
+  // 🧊 HELPER: GLASS TEXT FIELD
+  // ====================================================
+  Widget _buildGlassTextField({
     required TextEditingController controller,
-    required String hint,
+    required String hintText,
     required IconData icon,
-    required bool dark,
+    required bool isDark,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: dark
-            ? Colors.black.withOpacity(.24)
-            : Colors.white.withOpacity(.52),
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: dark ? Colors.white12 : Colors.white,
-        ),
+        color: isDark
+            ? Colors.black.withOpacity(0.3)
+            : Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? Colors.white12 : Colors.white70),
       ),
-      child: CupertinoTextField(
+      child: TextField(
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        prefix: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 10),
-          child: Icon(
-            icon,
-            size: 20,
-            color: dark ? Colors.white60 : Colors.black45,
-          ),
-        ),
-        placeholder: hint,
-        placeholderStyle: TextStyle(
-          color: dark ? Colors.white54 : Colors.black45,
-        ),
         style: TextStyle(
-          color: dark ? Colors.white : Colors.black87,
-          fontSize: 15,
+            color: isDark ? Colors.white : Colors.black,
+            fontFamily: 'Google Sans Flex'),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+          prefixIcon:
+              Icon(icon, color: isDark ? Colors.white70 : Colors.black54),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
-        decoration: const BoxDecoration(),
-      ),
-    );
-  }
-
-  Widget _orb(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withOpacity(.15),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(.18),
-            blurRadius: 100,
-            spreadRadius: 25,
-          ),
-        ],
       ),
     );
   }
