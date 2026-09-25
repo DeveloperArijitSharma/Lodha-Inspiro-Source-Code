@@ -1,3 +1,4 @@
+// Liquid Glass UI sync marker: restored baseline syntax.
 import 'dart:typed_data';
 import 'dart:ui';
 
