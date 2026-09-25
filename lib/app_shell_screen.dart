@@ -73,31 +73,202 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   Widget _chatPage() {
-    final type = _chatFilter == 0 ? 'classmate' : _chatFilter == 1 ? 'teacher' : 'group';
-    final chats = _chats.where((chat) => chat['chat_type'] == type).toList();
-    return Column(children: [
-      Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 10), child: _PageHeader(title: 'Messages', icon: CupertinoIcons.chat_bubble_2, onMenu: () => Scaffold.of(context).openDrawer())),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: _ChatFilters(selected: _chatFilter, onSelect: (v) => setState(() => _chatFilter = v))),
-      const SizedBox(height: 12),
-      Expanded(child: _chatLoading ? const Center(child: CupertinoActivityIndicator(radius: 14)) : chats.isEmpty ? const Center(child: Text('No conversations here yet.', style: TextStyle(fontWeight: FontWeight.w600))) : ListView.builder(padding: const EdgeInsets.fromLTRB(18, 0, 18, 130), itemCount: chats.length, itemBuilder: (_, i) { final chat = chats[i]; return _ChatCard(chat: chat, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat['id'], chatName: chat['chat_name'], chatType: chat['chat_type']))); })));
-    ]);
+    final type = _chatFilter == 0
+        ? 'classmate'
+        : _chatFilter == 1
+            ? 'teacher'
+            : 'group';
+    final chats =
+        _chats.where((chat) => chat['chat_type'] == type).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+          child: _PageHeader(
+            title: 'Messages',
+            icon: CupertinoIcons.chat_bubble_2,
+            onMenu: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: _ChatFilters(
+            selected: _chatFilter,
+            onSelect: (v) => setState(() => _chatFilter = v),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: _chatLoading
+              ? const Center(
+                  child: CupertinoActivityIndicator(radius: 14),
+                )
+              : chats.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No conversations here yet.',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 130),
+                      itemCount: chats.length,
+                      itemBuilder: (_, i) {
+                        final chat = chats[i];
+                        return _ChatCard(
+                          chat: chat,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(
+                                chatId: chat['id'],
+                                chatName: chat['chat_name'],
+                                chatType: chat['chat_type'],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDrawer(bool dark) {
     final user = _supabase.auth.currentUser;
-    final name = user?.userMetadata?['username']?.toString() ?? 'Student Portal';
+    final name =
+        user?.userMetadata?['username']?.toString() ?? 'Student Portal';
     final email = user?.email ?? '';
-    return Drawer(backgroundColor: Colors.transparent, child: ClipRRect(borderRadius: const BorderRadius.horizontal(right: Radius.circular(38)), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30), child: Container(decoration: BoxDecoration(color: dark ? Colors.black.withOpacity(.58) : Colors.white.withOpacity(.70), border: Border(right: BorderSide(color: dark ? Colors.white12 : Colors.white))), child: SafeArea(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Container(width: 54, height: 54, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4B8DFF).withOpacity(.18)), child: const Icon(CupertinoIcons.person_fill, color: Color(0xFF4B8DFF))), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)), Text(email, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: dark ? Colors.white54 : Colors.black45, fontSize: 12))]))]),
-      const SizedBox(height: 24),
-      _DrawerButton(icon: CupertinoIcons.home, title: 'Home', onTap: () { Navigator.pop(context); _setIndex(0); }),
-      _DrawerButton(icon: CupertinoIcons.folder, title: 'File Manager', onTap: () { Navigator.pop(context); _setIndex(2); }),
-      _DrawerButton(icon: CupertinoIcons.bell, title: 'Announcements', onTap: () => Navigator.pop(context)),
-      _DrawerButton(icon: CupertinoIcons.settings, title: 'Settings', onTap: () { Navigator.pop(context); _showSettings(dark); }),
-      if (user?.userMetadata?['role']?.toString() == 'teacher') _DrawerButton(icon: CupertinoIcons.video_camera, title: 'Student recordings', onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen())); }),
-      const Spacer(),
-      _DrawerButton(icon: CupertinoIcons.square_arrow_right, title: 'Sign out', destructive: true, onTap: () async { await _supabase.auth.signOut(); }),
-    ]))))));
+
+    return Drawer(
+      backgroundColor: Colors.transparent,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.horizontal(
+          right: Radius.circular(38),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Container(
+            decoration: BoxDecoration(
+              color: dark
+                  ? Colors.black.withOpacity(.58)
+                  : Colors.white.withOpacity(.70),
+              border: Border(
+                right: BorderSide(
+                  color: dark ? Colors.white12 : Colors.white,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF4B8DFF).withOpacity(.18),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.person_fill,
+                            color: Color(0xFF4B8DFF),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              Text(
+                                email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: dark ? Colors.white54 : Colors.black45,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _DrawerButton(
+                      icon: CupertinoIcons.home,
+                      title: 'Home',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _setIndex(0);
+                      },
+                    ),
+                    _DrawerButton(
+                      icon: CupertinoIcons.folder,
+                      title: 'File Manager',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _setIndex(2);
+                      },
+                    ),
+                    _DrawerButton(
+                      icon: CupertinoIcons.bell,
+                      title: 'Announcements',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    _DrawerButton(
+                      icon: CupertinoIcons.settings,
+                      title: 'Settings',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSettings(dark);
+                      },
+                    ),
+                    if (user?.userMetadata?['role']?.toString() == 'teacher')
+                      _DrawerButton(
+                        icon: CupertinoIcons.video_camera,
+                        title: 'Student recordings',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const TeacherRecordingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    const Spacer(),
+                    _DrawerButton(
+                      icon: CupertinoIcons.square_arrow_right,
+                      title: 'Sign out',
+                      destructive: true,
+                      onTap: () async {
+                        await _supabase.auth.signOut();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showSettings(bool dark) async {
