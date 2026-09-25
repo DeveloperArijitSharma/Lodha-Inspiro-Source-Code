@@ -1,3 +1,4 @@
+// Liquid Glass UI sync marker: restored baseline syntax.
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
