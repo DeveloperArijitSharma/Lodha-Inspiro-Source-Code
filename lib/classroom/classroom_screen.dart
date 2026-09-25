@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'classroom_models.dart';
 import 'classroom_repository.dart';
 import 'classwork_session_screen.dart';
+import 'demo_classwork_screen.dart';
 
 class ClassroomScreen extends StatefulWidget {
   const ClassroomScreen({super.key});
@@ -94,6 +95,8 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           ),
           const SizedBox(height: 22),
           _glassBanner(isDark, textColor),
+          const SizedBox(height: 14),
+          _demoClassworkCard(isDark, textColor),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,6 +137,37 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
             )
           else
             ..._courses.map((course) => _courseCard(course, isDark, textColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _demoClassworkCard(bool isDark, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF32C5FF), Color(0xFF7C5CFF)]),
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.science_rounded, color: Colors.white, size: 34),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Demo Classwork', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+                SizedBox(height: 4),
+                Text('Try the full student classwork flow without submitting to a teacher.', style: TextStyle(color: Colors.white70, height: 1.3, fontFamily: 'Google Sans Flex')),
+              ],
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemoClassworkScreen())),
+            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Color(0xFF3157A6)),
+            child: const Text('Open'),
+          ),
         ],
       ),
     );
