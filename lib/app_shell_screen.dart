@@ -289,13 +289,46 @@ class _GlassNavigation extends StatelessWidget {
   final ValueChanged<int> onSelect;
   const _GlassNavigation({required this.index, required this.dark, required this.onSelect});
   @override
-  Widget build(BuildContext context) => SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 12), child: ClipRRect(borderRadius: BorderRadius.circular(34), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28), child: Container(padding: const EdgeInsets.all(7), decoration: BoxDecoration(color: dark ? Colors.white.withOpacity(.09) : Colors.white.withOpacity(.68), borderRadius: BorderRadius.circular(34), border: Border.all(color: dark ? Colors.white.withOpacity(.13) : Colors.white, width: 1.2), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 28, offset: const Offset(0, 10))]), child: Row(children: [
-    _NavItem(index: 0, current: index, icon: CupertinoIcons.house_fill, label: 'Home', onSelect: onSelect),
-    _NavItem(index: 1, current: index, icon: CupertinoIcons.book, label: 'Classwork', onSelect: onSelect),
-    _NavItem(index: 2, current: index, icon: CupertinoIcons.folder_fill, label: 'Files', onSelect: onSelect),
-    _NavItem(index: 3, current: index, icon: CupertinoIcons.chat_bubble_2_fill, label: 'Chat', onSelect: onSelect),
-  ])))));
-}
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(34),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: dark ? Colors.white.withOpacity(.09) : Colors.white.withOpacity(.68),
+                borderRadius: BorderRadius.circular(34),
+                border: Border.all(
+                  color: dark ? Colors.white.withOpacity(.13) : Colors.white,
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.08),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _NavItem(index: 0, current: index, icon: CupertinoIcons.house_fill, label: 'Home', onSelect: onSelect),
+                  _NavItem(index: 1, current: index, icon: CupertinoIcons.book, label: 'Classwork', onSelect: onSelect),
+                  _NavItem(index: 2, current: index, icon: CupertinoIcons.folder_fill, label: 'Files', onSelect: onSelect),
+                  _NavItem(index: 3, current: index, icon: CupertinoIcons.chat_bubble_2_fill, label: 'Chat', onSelect: onSelect),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
 class _NavItem extends StatelessWidget {
   final int index;
@@ -330,8 +363,57 @@ class _ChatCard extends StatelessWidget {
   final VoidCallback onTap;
   const _ChatCard({required this.chat, required this.onTap});
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 10), child: ClipRRect(borderRadius: BorderRadius.circular(23), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: Material(color: Colors.white.withOpacity(.62), child: InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.all(15), child: Row(children: [Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4B8DFF).withOpacity(.14)), child: const Icon(CupertinoIcons.person_2_fill, color: Color(0xFF4B8DFF))), const SizedBox(width: 13), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${chat['chat_name']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)), const SizedBox(height: 4), const Text('Open conversation', style: TextStyle(color: Colors.black45, fontSize: 12))])), const Icon(CupertinoIcons.chevron_right, color: Color(0xFF4B8DFF), size: 18)]))))));
-}
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(23),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Material(
+            color: Colors.white.withOpacity(.62),
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(15),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF4B8DFF).withOpacity(.14),
+                      ),
+                      child: const Icon(CupertinoIcons.person_2_fill, color: Color(0xFF4B8DFF)),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${chat['chat_name']}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Open conversation',
+                            style: TextStyle(color: Colors.black45, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(CupertinoIcons.chevron_right, color: Color(0xFF4B8DFF), size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
 class _DrawerButton extends StatelessWidget {
   final IconData icon;
