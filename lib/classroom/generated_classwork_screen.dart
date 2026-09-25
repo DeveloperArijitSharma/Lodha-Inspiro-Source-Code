@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/studio_ai_service.dart';
 import '../features/ai_classwork_generator.dart';
 
 class GeneratedClassworkScreen extends StatefulWidget {
@@ -12,6 +13,8 @@ class GeneratedClassworkScreen extends StatefulWidget {
 class _GeneratedClassworkScreenState extends State<GeneratedClassworkScreen> {
   final List<TextEditingController> _answers = [];
   bool _submitted = false;
+  bool _grading = false;
+  String _gradingResult = '';
 
   @override
   void initState() {
@@ -29,17 +32,30 @@ class _GeneratedClassworkScreenState extends State<GeneratedClassworkScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_answers.every((controller) => controller.text.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Answer at least one question before submitting.')),
       );
       return;
     }
-    setState(() => _submitted = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('AI classwork submitted successfully!')),
-    );
+    setState(() {
+      _submitted = true;
+      _grading = true;
+      _gradingResult = 'Checking your answers…';
+    });
+    try {
+      final answers = <String>[];
+      for (var i = 0; i < widget.classwork.questions.length; i++) {
+        answers.add('Question ' + (i + 1).toString() + ': ' + widget.classwork.questions[i] + '\nStudent answer: ' + _answers[i].text.trim());
+      }
+      final result = await StudioAiService().generate(
+        'Grade the following student classwork. For every question, clearly write either Correct or Wrong and give one short reason. Do not use markdown tables.\n\n' + answers.join('\n\n'),
+      );
+      if (mounted) setState(() { _gradingResult = result; _grading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _gradingResult = 'The classwork was submitted, but AI grading is temporarily unavailable.'; _grading = false; });
+    }
   }
 
   @override
@@ -95,6 +111,23 @@ class _GeneratedClassworkScreenState extends State<GeneratedClassworkScreen> {
             ),
             const SizedBox(height: 14),
           ],
+          if (_submitted)
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: dark ? Colors.white.withOpacity(.07) : Colors.white.withOpacity(.84),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_grading ? 'AI is checking your answers…' : 'AI Classwork Result', style: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')),
+                  const SizedBox(height: 10),
+                  Text(_gradingResult, style: TextStyle(color: text.withOpacity(.78), height: 1.45, fontFamily: 'Google Sans Flex')),
+                ],
+              ),
+            ),
           FilledButton.icon(
             onPressed: _submitted ? null : _submit,
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF32C5FF), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
