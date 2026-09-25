@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchChatsFromSupabase();
   }
 
-  void _loadUser() {
+  Future<void> _loadUser() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
       final prefs = await SharedPreferences.getInstance();
