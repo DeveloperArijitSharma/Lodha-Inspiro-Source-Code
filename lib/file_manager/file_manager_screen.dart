@@ -1362,7 +1362,19 @@ class FilePreviewScreen extends StatelessWidget {
   Widget _body(BuildContext context) {
     final ext = file['extension'].toString().toLowerCase();
 
-    if (ext == 'pdf') return SfPdfViewer.memory(bytes);
+    if (ext == 'pdf') {
+      return SfPdfViewer.memory(
+        bytes,
+        canShowScrollHead: true,
+        canShowScrollStatus: true,
+        enableDoubleTapZooming: true,
+        onDocumentLoadFailed: (details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('PDF could not be rendered: ' + details.description)),
+          );
+        },
+      );
+    }
 
     if ({'jpg', 'jpeg', 'png', 'gif', 'webp'}.contains(ext)) {
       return Center(
