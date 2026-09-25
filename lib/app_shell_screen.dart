@@ -329,6 +329,7 @@ class _GlassNavigation extends StatelessWidget {
       ),
     );
   }
+}
 
 class _NavItem extends StatelessWidget {
   final int index;
@@ -414,6 +415,7 @@ class _ChatCard extends StatelessWidget {
       ),
     );
   }
+}
 
 class _DrawerButton extends StatelessWidget {
   final IconData icon;
