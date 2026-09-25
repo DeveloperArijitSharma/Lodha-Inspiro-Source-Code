@@ -1309,15 +1309,16 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _summary?.isNotEmpty == true
-                          ? _summary!
-                          : 'Generate a summary of everything in this notebook.',
-                      style: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.black87,
-                          fontFamily: 'Google Sans Flex',
-                          height: 1.4),
-                    ),
+                    _summary?.isNotEmpty == true
+                        ? _buildMarkdownMessage(_summary!, isDark ? Colors.white70 : Colors.black87)
+                        : Text(
+                            'Generate a summary of everything in this notebook.',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black87,
+                              fontFamily: 'Google Sans Flex',
+                              height: 1.4,
+                            ),
+                          ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: _generateSummary,
@@ -1366,147 +1367,6 @@ class _NotebookDetailScreenState extends State<NotebookDetailScreen>
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildStudioCard(
-          isDark: isDark,
-          textColor: textColor,
-          icon: Icons.podcasts_rounded,
-          title: 'Audio Overview',
-          child: _generatingScript
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                      child: CircularProgressIndicator(color: _accentBlue)),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_audioScript == null)
-                      Text(
-                        'Generate a two-host discussion of your sources, then listen to it narrated on-device.',
-                        style: TextStyle(
-                            color: isDark ? Colors.white70 : Colors.black87,
-                            fontFamily: 'Google Sans Flex',
-                            height: 1.4),
-                      ),
-                    if (_audioScript != null)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF111318)
-                              : const Color(0xFFF4F7FA),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    gradient: const LinearGradient(colors: [
-                                      Color(0xFF32C5FF),
-                                      Color(0xFF7C5CFF)
-                                    ]),
-                                  ),
-                                  child: const Icon(Icons.graphic_eq_rounded,
-                                      color: Colors.white),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                    child: Text('Two-host study discussion',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontFamily: 'Google Sans Flex'))),
-                                IconButton(
-                                  onPressed: _toggleNarration,
-                                  icon: Icon(
-                                      _speaking
-                                          ? Icons.stop_circle_rounded
-                                          : Icons.play_circle_fill_rounded,
-                                      size: 42,
-                                      color: _accentBlue),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Slider(
-                              value: _audioProgress.clamp(0.0, 1.0),
-                              onChanged: _seekAudio,
-                              activeColor: _accentBlue,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(_audioTime(_audioProgress),
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey)),
-                                Text(_audioTime(1),
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey)),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            const Text('Live transcript',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Google Sans Flex')),
-                            const SizedBox(height: 6),
-                            SizedBox(
-                              height: 190,
-                              child: ListView.builder(
-                                itemCount: _audioLines().length,
-                                itemBuilder: (_, i) {
-                                  final line = _audioLines()[i];
-                                  final active =
-                                      _speaking && i == _audioSpeakingLine;
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 6),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 120),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: active
-                                            ? _accentBlue.withOpacity(.12)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        line.replaceFirst(
-                                            RegExp(r'^Host [AB]:\s*',
-                                                caseSensitive: false),
-                                            ''),
-                                        style: TextStyle(
-                                            fontFamily: 'Google Sans Flex',
-                                            height: 1.35,
-                                            fontWeight: active
-                                                ? FontWeight.w600
-                                                : FontWeight.normal),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: _generateAudioOverview,
-                      child: Text(
-                          _audioScript == null ? 'Generate script' : 'Regenerate'),
-                    ),
-                  ],
-                ),
         ),
         const SizedBox(height: 16),
         _buildStudioCard(
