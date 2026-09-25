@@ -1,6 +1,9 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
@@ -30,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedChatTab = 0;
   final List<Map<String, dynamic>> _chats = [];
   bool _isLoadingChats = true;
+  String? _profileImageData;
 
   @override
   void initState() {
@@ -41,9 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadUser() {
     final user = supabase.auth.currentUser;
     if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
       setState(() {
         _userEmail = user.email ?? 'student@lws.edu';
         _userName = user.userMetadata?['username'] ?? 'Student Portal';
+        _profileImageData = prefs.getString('profile_image_base64');
       });
     }
   }
@@ -118,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _signOut() async {
     if (hapticsNotifier.value) HapticFeedback.mediumImpact();
     await supabase.auth.signOut();
-    if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AuthGate()));
   }
 
   Future<void> _updateUserName(String newName) async {
@@ -297,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader('Settings', textColor),
           SizedBox(height: size.height * 0.03),
-          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')])),
+          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [_profileAvatar(30, dark: isDark), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditProfileDialog(isDark), tooltip: 'Edit Profile')])),
           SizedBox(height: size.height * 0.025),
           Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: _accentBlue), const SizedBox(width: 12), Text('Light Mode', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Google Sans Flex'))]), Switch.adaptive(value: !isDark, activeColor: _accentBlue, onChanged: (value) { if (hapticsNotifier.value) HapticFeedback.selectionClick(); themeNotifier.value = value ? ThemeMode.light : ThemeMode.dark; })])),
           SizedBox(height: size.height * 0.025),
@@ -325,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [CircleAvatar(radius: size.width * 0.075, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 28)), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
+                    Row(children: [_profileAvatar(size.width * 0.075, dark: isDark), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
                     SizedBox(height: size.height * 0.02),
                     Divider(color: isDark ? Colors.white12 : Colors.black12, thickness: 1.5),
                     SizedBox(height: size.height * 0.02),
@@ -340,6 +345,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildSidebarItem(icon: Icons.chat_bubble_rounded, title: 'Messages', index: 3, isDark: isDark),
                     SizedBox(height: size.height * 0.01),
                     _buildSidebarItem(icon: Icons.settings_outlined, title: 'Settings', index: 4, isDark: isDark),
+                    SizedBox(height: size.height * 0.01),
+                    ListTile(
+                      leading: Icon(Icons.campaign_rounded, color: isDark ? Colors.white60 : Colors.black54),
+                      title: const Text('Announcements', style: TextStyle(fontFamily: 'Google Sans Flex')),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()));
+                      },
+                    ),
                     if (supabase.auth.currentUser?.userMetadata?['role']?.toString() == 'teacher') ...[
                       SizedBox(height: size.height * 0.01),
                       ListTile(leading: Icon(Icons.video_library_rounded, color: isDark ? Colors.white60 : Colors.black54), title: const Text('Student recordings', style: TextStyle(fontFamily: 'Google Sans Flex')), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherRecordingsScreen())); }),
@@ -394,6 +408,90 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedChatTab == 0 || _selectedChatTab == 1) return _GlassDialogBase(isDark: isDark, accentColor: accentColor, isLoading: isLoading, title: _selectedChatTab == 0 ? 'Add Classmate' : 'Chat with Teacher', icon: _selectedChatTab == 0 ? Icons.person_add_rounded : Icons.school_rounded, actionText: 'Start Chat', content: _buildGlassTextField(controller: emailController, hintText: 'Registered Email Address', icon: Icons.email_outlined, isDark: isDark), onAction: handleAddUser);
       return _GlassDialogBase(isDark: isDark, accentColor: accentColor, isLoading: isLoading, title: 'Create Group', icon: Icons.group_add_rounded, actionText: 'Create', content: _buildGlassTextField(controller: groupController, hintText: 'Group Name', icon: Icons.title_rounded, isDark: isDark), onAction: handleAddUser);
     }));
+  }
+
+  Future<void> _pickProfilePicture() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 72,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final encoded = base64Encode(bytes);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_image_base64', encoded);
+    if (mounted) setState(() => _profileImageData = encoded);
+    _showGlassSnackBar('Profile picture updated!');
+  }
+
+  Widget _profileAvatar(double radius, {bool dark = false}) {
+    final data = _profileImageData;
+    if (data != null && data.isNotEmpty) {
+      try {
+        return CircleAvatar(
+          radius: radius,
+          backgroundImage: MemoryImage(base64Decode(data)),
+        );
+      } catch (_) {}
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: _accentBlue.withOpacity(0.2),
+      child: Icon(Icons.person_rounded, color: _accentBlue, size: radius * 1.05),
+    );
+  }
+
+  void _showEditProfileDialog(bool isDark) {
+    final nameController = TextEditingController(text: _userName);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (dialogContext) => _GlassDialogBase(
+        isDark: isDark,
+        accentColor: _accentBlue,
+        title: 'Edit Profile',
+        icon: Icons.person_rounded,
+        actionText: 'Save',
+        content: Column(
+          children: [
+            GestureDetector(
+              onTap: _pickProfilePicture,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  _profileAvatar(46, dark: isDark),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _accentBlue,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildGlassTextField(
+              controller: nameController,
+              hintText: 'Display Name',
+              icon: Icons.badge_rounded,
+              isDark: isDark,
+            ),
+          ],
+        ),
+        onAction: () async {
+          Navigator.pop(dialogContext);
+          await _updateUserName(nameController.text);
+        },
+      ),
+    );
   }
 
   void _showEditNameDialog(bool isDark) {
