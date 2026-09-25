@@ -16,11 +16,16 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
+    final demo = <String, dynamic>{
+      'title': 'Welcome to Lodha Inspiro',
+      'body': 'Explore your classes, classwork, notebooks, files and AI study tools. This is a demo announcement for the student presentation.',
+    };
     try {
       final rows = await _client.from('announcements').select().order('created_at', ascending: false);
-      if (mounted) setState(() => _items = List<Map<String, dynamic>>.from(rows));
+      final items = List<Map<String, dynamic>>.from(rows);
+      if (mounted) setState(() => _items = [demo, ...items]);
     } catch (_) {
-      if (mounted) setState(() => _items = []);
+      if (mounted) setState(() => _items = [demo]);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
