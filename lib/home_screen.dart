@@ -1,4 +1,8 @@
 import 'dart:ui';
+import 'dart:convert';
+
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -26,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   String _userName = 'Student Portal';
   String _userEmail = '';
+  String? _profileImageData;
   final Color _accentBlue = const Color(0xFF32C5FF);
   int _selectedChatTab = 0;
   final List<Map<String, dynamic>> _chats = [];
@@ -38,14 +43,38 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchChatsFromSupabase();
   }
 
-  void _loadUser() {
+  Future<void> _loadUser() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       setState(() {
         _userEmail = user.email ?? 'student@lws.edu';
         _userName = user.userMetadata?['username'] ?? 'Student Portal';
+        _profileImageData = prefs.getString('profile_image_base64');
       });
     }
+  }
+
+  Future<void> _pickProfileImage() async {
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      final encoded = base64Encode(bytes);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_image_base64', encoded);
+      if (!mounted) return;
+      setState(() => _profileImageData = encoded);
+      _showGlassSnackBar('Profile picture updated! ✨');
+    } catch (_) {
+      if (mounted) _showGlassSnackBar('Could not update profile picture.', isError: true);
+    }
+  }
+
+  ImageProvider? _profileImageProvider() {
+    if (_profileImageData == null || _profileImageData!.isEmpty) return null;
+    try { return MemoryImage(base64Decode(_profileImageData!)); } catch (_) { return null; }
   }
 
   Future<void> _fetchChatsFromSupabase() async {
@@ -297,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader('Settings', textColor),
           SizedBox(height: size.height * 0.03),
-          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 32)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')])),
+          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(children: [CircleAvatar(radius: 30, backgroundColor: _accentBlue.withOpacity(0.2), backgroundImage: _profileImageProvider(), child: _profileImageData == null ? Icon(Icons.person_rounded, color: _accentBlue, size: 32) : null), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), const SizedBox(height: 2), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 13, fontFamily: 'Google Sans Flex'))])), Row(children: [IconButton(icon: Icon(Icons.photo_camera_rounded, color: _accentBlue), onPressed: _pickProfileImage, tooltip: 'Change Profile Picture'), IconButton(icon: Icon(Icons.edit_rounded, color: _accentBlue), onPressed: () => _showEditNameDialog(isDark), tooltip: 'Change Display Name')])])),
           SizedBox(height: size.height * 0.025),
           Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, color: _accentBlue), const SizedBox(width: 12), Text('Light Mode', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Google Sans Flex'))]), Switch.adaptive(value: !isDark, activeColor: _accentBlue, onChanged: (value) { if (hapticsNotifier.value) HapticFeedback.selectionClick(); themeNotifier.value = value ? ThemeMode.light : ThemeMode.dark; })])),
           SizedBox(height: size.height * 0.025),
@@ -325,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [CircleAvatar(radius: size.width * 0.075, backgroundColor: _accentBlue.withOpacity(0.2), child: Icon(Icons.person_rounded, color: _accentBlue, size: 28)), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
+                    Row(children: [CircleAvatar(radius: size.width * 0.075, backgroundColor: _accentBlue.withOpacity(0.2), backgroundImage: _profileImageProvider(), child: _profileImageData == null ? Icon(Icons.person_rounded, color: _accentBlue, size: 28) : null), SizedBox(width: size.width * 0.04), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_userName, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: size.width * 0.045, fontWeight: FontWeight.bold, fontFamily: 'Google Sans Flex')), SizedBox(height: size.height * 0.003), Text(_userEmail, style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: size.width * 0.03, fontFamily: 'Google Sans Flex'), overflow: TextOverflow.ellipsis)]))]),
                     SizedBox(height: size.height * 0.02),
                     Divider(color: isDark ? Colors.white12 : Colors.black12, thickness: 1.5),
                     SizedBox(height: size.height * 0.02),
